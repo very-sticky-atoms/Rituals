@@ -2,20 +2,12 @@ package com.ccyscnyz.rituals.registry.item;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.annotation.TabItem;
-import com.ccyscnyz.rituals.tags.RitualsTags;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.PickaxeItem;
-import net.minecraft.world.item.Tiers;
-import net.minecraft.world.item.component.Tool;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import java.util.List;
 
 public class RitualsItems {
     public static final DeferredRegister.Items ITEMS =
