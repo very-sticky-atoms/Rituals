@@ -1,6 +1,7 @@
 package com.ccyscnyz.rituals.registry.item;
 
 import com.ccyscnyz.rituals.Rituals;
+import com.ccyscnyz.rituals.annotation.TabItem;
 import com.ccyscnyz.rituals.tags.RitualsTags;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.BlockTags;
@@ -20,10 +21,13 @@ public class RitualsItems {
     public static final DeferredRegister.Items ITEMS =
             DeferredRegister.createItems(Rituals.MODID);
 
+    @TabItem("rituals_tab")
     public static final DeferredItem<Item> COPPER_PICKAXE = ITEMS.register("copper_pickaxe",
             () -> new PickaxeItem(RitualsTiers.COPPER, new Item.Properties()));
+    @TabItem("rituals_tab")
     public static final DeferredItem<Item> STEEL_PICKAXE = ITEMS.register("steel_pickaxe",
             () -> new PickaxeItem(RitualsTiers.STEEL, new Item.Properties()));
+    @TabItem("rituals_tab")
     public static final DeferredItem<Item> OBSIDIAN_PICKAXE = ITEMS.register("obsidian_pickaxe",
             () -> new PickaxeItem(RitualsTiers.OBSIDIAN, new Item.Properties()));
 

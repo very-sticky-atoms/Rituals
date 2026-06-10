@@ -1,6 +1,7 @@
 package com.ccyscnyz.rituals.registry.item;
 
 import com.ccyscnyz.rituals.Rituals;
+import com.ccyscnyz.rituals.util.TabItemCollector; // 引入收集器
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -13,6 +14,7 @@ import java.util.function.Supplier;
 public class RitualsCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Rituals.MODID);
+
     public static void register(IEventBus eventBus) {
         CREATIVE_TABS.register(eventBus);
     }
@@ -23,11 +25,10 @@ public class RitualsCreativeTabs {
                     .title(Component.translatable("creativetab.rituals"))
                     .icon(() -> new ItemStack(RitualsItems.COPPER_PICKAXE.get()))
                     .displayItems((params, output) -> {
-                        output.accept(RitualsItems.COPPER_PICKAXE);
-                        output.accept(RitualsItems.STEEL_PICKAXE);
-                        output.accept(RitualsItems.OBSIDIAN_PICKAXE);
+                        // 自动添加所有标记为 "rituals_tab" 的物品
+                        TabItemCollector.getItemsForTab("rituals_tab")
+                                .forEach(sup -> output.accept(sup.get().getDefaultInstance()));
                     })
-                    // 7. 建造完成，生成最终的 CreativeModeTab 实例
                     .build()
     );
 }

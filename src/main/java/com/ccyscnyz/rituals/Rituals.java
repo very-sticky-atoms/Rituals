@@ -4,6 +4,7 @@ import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
+import com.ccyscnyz.rituals.util.TabItemCollector;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -45,6 +46,8 @@ public class Rituals {
     public Rituals(IEventBus modEventBus, ModContainer modContainer) {
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
+
+        TabItemCollector.collect(MODID);
 
         RitualsCreativeTabs.CREATIVE_TABS.register(modEventBus);
         RitualsItems.ITEMS.register(modEventBus);
