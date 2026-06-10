@@ -3,6 +3,7 @@ package com.ccyscnyz.rituals;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
+import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -51,7 +52,7 @@ public class Rituals {
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
-
+        
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
