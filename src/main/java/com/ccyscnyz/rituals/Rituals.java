@@ -1,5 +1,7 @@
 package com.ccyscnyz.rituals;
 
+import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
+import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -41,7 +43,8 @@ public class Rituals {
     public Rituals(IEventBus modEventBus, ModContainer modContainer) {
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
-
+        RitualsItems.ITEMS.register(modEventBus);
+        RitualsBlocks.BLOCKS.register(modEventBus);
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
 
