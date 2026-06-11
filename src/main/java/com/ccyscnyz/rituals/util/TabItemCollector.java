@@ -51,6 +51,10 @@ public class TabItemCollector {
         return TAB_ITEMS.getOrDefault(tabName, Collections.emptyList());
     }
 
+    public static void addItemToTab(String tabName, Supplier<? extends Item> itemSupplier) {
+        TAB_ITEMS.computeIfAbsent(tabName, k -> new ArrayList<>()).add(itemSupplier);
+    }
+
     public static void clear() {
         TAB_ITEMS.clear();
     }
