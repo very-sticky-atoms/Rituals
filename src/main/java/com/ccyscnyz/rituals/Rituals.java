@@ -6,6 +6,8 @@ import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
+import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeSerializers;
+import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import com.ccyscnyz.rituals.util.TabItemCollector;
 import org.slf4j.Logger;
 
@@ -58,6 +60,8 @@ public class Rituals {
         BlockItemRegistrar.process(MODID);
 
         RitualsBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+        RitualsRecipeTypes.RECIPE_TYPES.register(modEventBus);
+        RitualsRecipeSerializers.SERIALIZERS.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
