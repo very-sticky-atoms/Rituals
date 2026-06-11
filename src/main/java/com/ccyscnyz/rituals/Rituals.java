@@ -2,6 +2,7 @@ package com.ccyscnyz.rituals;
 
 import com.ccyscnyz.rituals.registry.block.BlockItemRegistrar;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
+import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
@@ -55,6 +56,8 @@ public class Rituals {
         RitualsBlocks.BLOCKS.register(modEventBus);
 
         BlockItemRegistrar.process(MODID);
+
+        RitualsBlockEntities.BLOCK_ENTITIES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
