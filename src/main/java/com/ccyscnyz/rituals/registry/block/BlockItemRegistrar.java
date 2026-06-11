@@ -36,17 +36,11 @@ public class BlockItemRegistrar {
                         // 读取注解数据
                         Map<String, Object> data = ad.annotationData();
                         String tab = (String) data.getOrDefault("tab", "");
-                        int maxStackSize = (int) data.getOrDefault("maxStackSize", 64);
-                        int durability = (int) data.getOrDefault("durability", 0);
 
                         // 注册 BlockItem
                         String name = deferredBlock.getId().getPath(); // 方块注册名
                         Supplier<? extends Item> itemSupplier =
-                                RitualsItems.ITEMS.register(name, () -> {
-                                    Item.Properties props = new Item.Properties().stacksTo(maxStackSize);
-                                    if (durability > 0) props.durability(durability);
-                                    return new BlockItem(deferredBlock.get(), props);
-                                });
+                                RitualsItems.ITEMS.registerSimpleBlockItem(name,deferredBlock);
 
                         // 如果指定了标签页，则添加到 TabItemCollector
                         if (!tab.isEmpty()) {
