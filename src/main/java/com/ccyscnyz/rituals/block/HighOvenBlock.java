@@ -16,6 +16,7 @@ import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -32,10 +34,13 @@ import java.util.List;
 
 public class HighOvenBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     public HighOvenBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+        this.registerDefaultState(this.stateDefinition.any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(LIT, false));
     }
 
     @Override
@@ -45,13 +50,20 @@ public class HighOvenBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, LIT);
+    }
+
+    @Override
+    public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
+        return state.getValue(LIT) ? 13 : 0;
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite())
+                .setValue(LIT, false);
     }
 
     @Override
@@ -68,8 +80,12 @@ public class HighOvenBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide()) return null;
-        return createTickerHelper(type, RitualsBlockEntities.HIGH_OVEN.get(), HighOvenBlockEntity::serverTick);
+        if (level.isClientSide()) {
+            return createTickerHelper(type, RitualsBlockEntities.HIGH_OVEN.get(),
+                    HighOvenBlockEntity::clientTick);
+        }
+        return createTickerHelper(type, RitualsBlockEntities.HIGH_OVEN.get(),
+                HighOvenBlockEntity::serverTick);
     }
 
     @Override
@@ -86,7 +102,7 @@ public class HighOvenBlock extends BaseEntityBlock {
 
         // 超压时无论成功失败都灼伤玩家，并播放蒸汽
         if (entity.pressure > 0) {
-            player.hurt(level.damageSources().hotFloor(), 1.0F);
+            player.hurt(level.damageSources().hotFloor(), entity.pressure/1000F);
             if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.CLOUD,
                         pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
@@ -205,7 +221,7 @@ public class HighOvenBlock extends BaseEntityBlock {
                         dropY,
                         dropZ,
                         3.0F, // 爆炸威力
-                        false, // 生成火
+                        false, // 不生成火
                         Level.ExplosionInteraction.BLOCK //会破坏方块
                     );
                 }
