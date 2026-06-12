@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "rituals:block/ritual_pillar"
+    }
+  }
+}

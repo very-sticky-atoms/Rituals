@@ -2,7 +2,9 @@ package com.ccyscnyz.rituals.registry.block;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.annotation.AutoBlockItem;
+import com.ccyscnyz.rituals.block.EarthAltarBlock;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
+import com.ccyscnyz.rituals.block.RitualPillarBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -20,6 +22,24 @@ public class RitualsBlocks {
                     .strength(3.5F)           // 硬度
                     .requiresCorrectToolForDrops()  // 需要正确工具才能掉落
                     .sound(SoundType.METAL)   // 金属声音
+            )
+    );
+
+    @AutoBlockItem(tab = "rituals_tab")
+    public static final DeferredBlock<Block> RITUAL_PILLAR = BLOCKS.register("ritual_pillar",
+            () -> new RitualPillarBlock(BlockBehaviour.Properties.of()
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.STONE)
+            )
+    );
+
+    @AutoBlockItem(tab = "rituals_tab")
+    public static final DeferredBlock<Block> EARTH_ALTAR = BLOCKS.register("earth_altar",
+            () -> new EarthAltarBlock(BlockBehaviour.Properties.of()
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.STONE)
             )
     );
 }

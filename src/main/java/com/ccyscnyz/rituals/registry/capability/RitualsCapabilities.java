@@ -2,7 +2,9 @@ package com.ccyscnyz.rituals.registry.capability;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
+import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
+import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.util.SidedItemHandler;
 import net.minecraft.core.Direction;
@@ -39,6 +41,30 @@ public class RitualsCapabilities {
                         }
                         // 顶部、右侧等其他面：无漏斗交互
                         return null;
+                    }
+                    return null;
+                }
+        );
+
+
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                RitualsBlockEntities.EARTH_ALTAR.get(),
+                (blockEntity, side) -> {
+                    if (blockEntity instanceof EarthAltarBlockEntity entity) {
+                        return entity.inventory;
+                    }
+                    return null;
+                }
+        );
+
+
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                RitualsBlockEntities.RITUAL_PILLAR.get(),
+                (blockEntity, side) -> {
+                    if (blockEntity instanceof RitualPillarBlockEntity entity) {
+                        return entity.inventory;
                     }
                     return null;
                 }

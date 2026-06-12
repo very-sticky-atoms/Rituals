@@ -2,8 +2,8 @@
   "type": "rituals:high_oven",
   "inputs": [
     { "item": "minecraft:raw_iron" },
-    { "item": "minecraft:coal" },
-    {  "tag": "minecraft:sand" }
+    { "tag": "minecraft:coals" },
+    { "tag": "minecraft:sand" }
   ],
   "fuel": { "item": "minecraft:torch" },
   "output": { "id": "minecraft:iron_ingot", "count": 1 },

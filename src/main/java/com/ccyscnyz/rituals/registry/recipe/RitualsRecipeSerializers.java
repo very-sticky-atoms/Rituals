@@ -1,6 +1,7 @@
 package com.ccyscnyz.rituals.registry.recipe;
 
 import com.ccyscnyz.rituals.Rituals;
+import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.HighOvenRecipe;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.Registries;
@@ -25,6 +26,16 @@ public class RitualsRecipeSerializers {
                 @Override
                 public StreamCodec<RegistryFriendlyByteBuf, HighOvenRecipe> streamCodec() {
                     return HighOvenRecipe.STREAM_CODEC;
+                }
+            });
+
+    public static final Supplier<RecipeSerializer<EarthAltarRecipe>> EARTH_ALTAR_SERIALIZER =
+            SERIALIZERS.register("earth_altar", () -> new RecipeSerializer<>() {
+                @Override
+                public MapCodec<EarthAltarRecipe> codec() { return EarthAltarRecipe.CODEC; }
+                @Override
+                public StreamCodec<RegistryFriendlyByteBuf, EarthAltarRecipe> streamCodec() {
+                    return EarthAltarRecipe.STREAM_CODEC;
                 }
             });
 }

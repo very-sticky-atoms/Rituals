@@ -1,6 +1,7 @@
 package com.ccyscnyz.rituals.registry.recipe;
 
 import com.ccyscnyz.rituals.Rituals;
+import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.HighOvenRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -14,4 +15,7 @@ public class RitualsRecipeTypes {
 
     public static final Supplier<RecipeType<HighOvenRecipe>> HIGH_OVEN_RECIPE_TYPE =
             RECIPE_TYPES.register("high_oven", () -> HighOvenRecipe.Type.INSTANCE);
+
+    public static final Supplier<RecipeType<EarthAltarRecipe>> EARTH_ALTAR_RECIPE_TYPE =
+            RECIPE_TYPES.register("earth_altar", () -> EarthAltarRecipe.Type.INSTANCE);
 }

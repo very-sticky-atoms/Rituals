@@ -1,18 +1,17 @@
 package com.ccyscnyz.rituals.compat.jei;
 
 import com.ccyscnyz.rituals.Rituals;
-import com.ccyscnyz.rituals.recipe.HighOvenRecipe;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import java.util.List;
 
 @JeiPlugin
 public class RitualsJEIPlugin implements IModPlugin {
@@ -26,23 +25,36 @@ public class RitualsJEIPlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
-        registration.addRecipeCategories(new HighOvenRecipeCategory(registration.getJeiHelpers().getGuiHelper()));
+        IGuiHelper guiHelper = registration.getJeiHelpers().getGuiHelper();
+
+        registration.addRecipeCategories(new HighOvenRecipeCategory(guiHelper));
+        registration.addRecipeCategories(new EarthAltarRecipeCategory(guiHelper));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         if (Minecraft.getInstance().level != null) {
-            var recipes = Minecraft.getInstance().level.getRecipeManager()
-                    .getAllRecipesFor(RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get())
+            var recipeManager = Minecraft.getInstance().level.getRecipeManager();
+
+            var highOvenRecipes = recipeManager.getAllRecipesFor(
+                            RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get())
                     .stream()
                     .map(holder -> holder.value())
                     .toList();
-            registration.addRecipes(HighOvenRecipeCategory.TYPE, recipes);
+            registration.addRecipes(HighOvenRecipeCategory.TYPE, highOvenRecipes);
+
+            var earthAltarRecipes = recipeManager.getAllRecipesFor(
+                            RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get())
+                    .stream()
+                    .map(holder -> holder.value())
+                    .toList();
+            registration.addRecipes(EarthAltarRecipeCategory.TYPE, earthAltarRecipes);
         }
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(new ItemStack(RitualsBlocks.HIGH_OVEN.get()), HighOvenRecipeCategory.TYPE);
+        registration.addRecipeCatalyst(new ItemStack(RitualsBlocks.EARTH_ALTAR.get()), EarthAltarRecipeCategory.TYPE);
     }
 }

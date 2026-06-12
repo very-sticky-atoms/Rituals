@@ -1,5 +1,6 @@
 package com.ccyscnyz.rituals;
 
+import com.ccyscnyz.rituals.datagen.RitualsItemModelProvider;
 import com.ccyscnyz.rituals.registry.block.BlockItemRegistrar;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
@@ -10,6 +11,7 @@ import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import com.ccyscnyz.rituals.util.TabItemCollector;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 
