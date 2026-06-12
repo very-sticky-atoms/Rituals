@@ -42,14 +42,24 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
             List<Ingredient> required = inputs.get(dir);
             List<ItemStack> actual = input.getDirection(dir);
 
-            // 所需物品不能超过实际的柱子数量
-            if (required.size() > actual.size()) return false;
+            // 过滤空物品
+            List<ItemStack> nonEmptyActual = new ArrayList<>();
+            for (ItemStack stack : actual) {
+                if (!stack.isEmpty()) {
+                    nonEmptyActual.add(stack);
+                }
+            }
 
-            // 按顺序逐个匹配
+            // 实际物品数量必须与配方定义的数量严格相等
+            if (required.size() != nonEmptyActual.size()) {
+                return false;
+            }
+
+            // 逐项匹配
             for (int i = 0; i < required.size(); i++) {
-                ItemStack pillarStack = actual.get(i);
-                if (pillarStack.isEmpty()) return false;
-                if (!required.get(i).test(pillarStack)) return false;
+                if (!required.get(i).test(nonEmptyActual.get(i))) {
+                    return false;
+                }
             }
         }
         return true;

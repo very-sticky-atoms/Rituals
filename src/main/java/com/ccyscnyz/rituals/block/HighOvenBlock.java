@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -136,11 +137,13 @@ public class HighOvenBlock extends BaseEntityBlock {
 
         // 超压时无论成功失败都灼伤玩家，并播放蒸汽
         if (entity.pressure > 0) {
-            player.hurt(level.damageSources().hotFloor(), entity.pressure/1000F);
+            player.hurt(level.damageSources().hotFloor(), 8 * entity.pressure / 1000F);
             if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.CLOUD,
                         pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
                         5, 0.2, 0.1, 0.2, 0.02);
+                serverLevel.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH,
+                        SoundSource.BLOCKS, 0.7f, 2.0f);
             }
         }
 
@@ -225,7 +228,7 @@ public class HighOvenBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof HighOvenBlockEntity entity) {
-                boolean isOverpressure = entity.pressure >= HighOvenBlockEntity.MAX_PRESSURE;
+                boolean isOverpressure = entity.pressure > 0;
 
                 // 掉落所有物品(短暂无敌以免疫爆炸)
                 double dropX = pos.getX() + 0.5;
@@ -259,6 +262,7 @@ public class HighOvenBlock extends BaseEntityBlock {
                         Level.ExplosionInteraction.BLOCK //会破坏方块
                     );
                 }
+                entity.pressure = 0f;
 
                 level.updateNeighbourForOutputSignal(pos, this);
             }

@@ -2,6 +2,7 @@ package com.ccyscnyz.rituals.block;
 
 import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -46,7 +47,7 @@ public class RitualPillarBlock extends Block implements EntityBlock {
     }
 
     public RitualPillarBlock(Properties properties) {
-        super(properties.noOcclusion()); // 关键：不遮挡光线
+        super(properties.noOcclusion()); // 不遮挡光线
     }
 
     @Nullable
@@ -89,6 +90,23 @@ public class RitualPillarBlock extends Block implements EntityBlock {
                 return ItemInteractionResult.SUCCESS;
             }
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        }
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof RitualPillarBlockEntity entity) {
+                for (int i = 0; i < entity.inventory.getSlots(); i++) {
+                    ItemStack stack = entity.inventory.getStackInSlot(i);
+                    if (!stack.isEmpty()) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
+                    }
+                }
+                level.updateNeighbourForOutputSignal(pos, this);
+            }
+            super.onRemove(state, level, pos, newState, isMoving);
         }
     }
 }

@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import org.checkerframework.checker.units.qual.Angle;
 
 @OnlyIn(Dist.CLIENT)
 public class EarthAltarRenderer implements BlockEntityRenderer<EarthAltarBlockEntity> {
@@ -23,20 +24,21 @@ public class EarthAltarRenderer implements BlockEntityRenderer<EarthAltarBlockEn
         ItemStack stack = be.inventory.getStackInSlot(0);
         if (stack.isEmpty()) return;
 
-        // 根据进度调整旋转速度：基础 2 度/秒，随着进度进度额外 15 度/秒
+        // 根据进度调整旋转速度
         int progress = be.getCraftProgress();
         int maxProgress = be.getMaxCraftTime();
         float speed = 2.0f;
         if (maxProgress > 0) {
-            speed += (float) progress / maxProgress * 15.0f;
+            speed = 2.0f + 0.2f * (float) Math.pow((float) progress / maxProgress , 2) ;
         }
 
         long gameTime = be.getLevel().getGameTime();
-        float angle = (gameTime + partialTick) * speed;
+        float angle = gameTime * speed;
+        System.out.println(String.valueOf((float) progress / maxProgress) + " " + String.valueOf(maxProgress) + " " + String.valueOf(speed));
 
         poseStack.pushPose();
         // 移动到方块中心上方
-        poseStack.translate(0.5, 1.2, 0.5);
+        poseStack.translate(0.5, 1.3 + 0.1 * Math.sin(gameTime * (speed / 50 + 0.1)), 0.5);
         // 绕 Y 轴旋转
         poseStack.mulPose(Axis.YP.rotationDegrees(angle));
         // 缩放

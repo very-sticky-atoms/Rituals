@@ -23,6 +23,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Density;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
@@ -71,6 +72,22 @@ public class HighOvenBlockEntity extends BlockEntity {
     // ---------- 服务端每 tick ----------
     public static void serverTick(Level level, BlockPos pos, BlockState state, HighOvenBlockEntity entity) {
         ItemStack fuelSlot = entity.inventory.getStackInSlot(3);
+
+        entity.tickPressure(level);
+        entity.setChanged();
+
+        entity.updateLitState(level, pos, state);
+
+        float pressure = entity.pressure;
+        if (entity.pressure > 0 && level.random.nextFloat() < pressure / MAX_PRESSURE / 4 + 0.1) {
+            level.playSound(null, pos, SoundEvents.FIRE_AMBIENT,
+                    SoundSource.BLOCKS, 0.7f, 2.0f);
+        }
+
+        BlockState updatedState = level.getBlockState(pos);
+        if (level.getGameTime() % 10 == 0) {
+            level.sendBlockUpdated(pos, updatedState, updatedState, 2);
+        }
 
         // 1. 如果已点火，检查 currentFuel 是否仍然有效
         if (!entity.currentFuel.isEmpty()) {
@@ -176,18 +193,6 @@ public class HighOvenBlockEntity extends BlockEntity {
             entity.progress = 0;
         }
 
-        // 4. 压力更新
-        entity.tickPressure(level);
-        entity.setChanged();
-
-        // 5. 根据进度更新 LIT 状态（工作时发光）
-        entity.updateLitState(level, pos, state);
-
-        // 6. 超压声音
-        if (entity.pressure > 0 && level.getGameTime() % 20 == 0) {
-            level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH,
-                    SoundSource.BLOCKS, 0.5f, 2.0f);
-        }
     }
 
     private void updateLitState(Level level, BlockPos pos, BlockState state) {
@@ -291,11 +296,14 @@ public class HighOvenBlockEntity extends BlockEntity {
     public static void clientTick(Level level, BlockPos pos, BlockState state, HighOvenBlockEntity entity) {
         if (entity.pressure > 0 && level.isClientSide()) {
             float density = entity.pressure / MAX_PRESSURE;
-            if (level.random.nextFloat() < density) {
+            if (level.random.nextFloat() < density + 0.1) {
                 double x = pos.getX() + 0.5 + (level.random.nextDouble() - 0.5) * 0.7;
                 double y = pos.getY() + 1.0;
                 double z = pos.getZ() + 0.5 + (level.random.nextDouble() - 0.5) * 0.7;
                 level.addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.05, 0);
+                if (level.random.nextFloat() < Math.pow(density, 0.1)) {
+                    level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0.05, 0);
+                }
             }
         }
     }

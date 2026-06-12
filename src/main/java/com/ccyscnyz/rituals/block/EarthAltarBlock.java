@@ -4,6 +4,7 @@ import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -71,6 +72,23 @@ public class EarthAltarBlock extends BaseEntityBlock {
                 return ItemInteractionResult.SUCCESS;
             }
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        }
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof EarthAltarBlockEntity entity) {
+                for (int i = 0; i < entity.inventory.getSlots(); i++) {
+                    ItemStack stack = entity.inventory.getStackInSlot(i);
+                    if (!stack.isEmpty()) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
+                    }
+                }
+                level.updateNeighbourForOutputSignal(pos, this);
+            }
+            super.onRemove(state, level, pos, newState, isMoving);
         }
     }
 

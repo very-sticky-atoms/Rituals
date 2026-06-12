@@ -29,7 +29,7 @@ public class RitualPillarRenderer implements BlockEntityRenderer<RitualPillarBlo
 
         poseStack.pushPose();
         // 移动到方块中心上方
-        poseStack.translate(0.5, 0.9, 0.5);
+        poseStack.translate(0.5, 1.0 + 0.05 * Math.cos(gameTime * 0.1), 0.5);
         // 绕 Y 轴旋转
         poseStack.mulPose(Axis.YP.rotationDegrees(angle));
         // 缩放

@@ -174,6 +174,34 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         entity.setChanged();
+        level.sendBlockUpdated(pos, state, state, 2);
+
+        // 合成进度粒子效果
+        if (entity.craftProgress > 0 && level instanceof ServerLevel serverLevel) {
+            int particleCount = entity.craftProgress / 5 + 1; // 进度越多粒子越多
+            for (int i = 0; i < particleCount; i++) {
+                // 在祭坛周围随机位置生成粒子
+                double angle = level.random.nextDouble() * Math.PI * 2;
+                double distance = 1.5 + level.random.nextDouble() * 2.5;
+                double x = pos.getX() + 0.5 + Math.cos(angle) * distance;
+                double z = pos.getZ() + 0.5 + Math.sin(angle) * distance;
+                double y = pos.getY() + 0.2 + level.random.nextDouble() * 0.6;
+
+                float progress = (float) entity.craftProgress/entity.maxCraftTime;
+                // 粒子向祭坛中心移动
+                double dx = (pos.getX() + 0.5 - x) * 12 * progress;
+                double dy = (pos.getY() + 0.8 - y) * 7.5 * progress;
+                double dz = (pos.getZ() + 0.5 - z) * 12 * progress;
+
+                serverLevel.sendParticles(
+                        ParticleTypes.DUST_PLUME, // 土黄色粉尘粒子，大地主题
+                        x, y, z,
+                        0,    // 数量
+                        dx, dy, dz,  // 向中心移动的速度
+                        0.05  // 粒子速度偏差
+                );
+            }
+        }
     }
 
     @Override
