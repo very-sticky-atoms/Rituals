@@ -41,19 +41,32 @@ public class HighOvenRenderer implements BlockEntityRenderer<HighOvenBlockEntity
         poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
 
         // 渲染三个输入槽（槽0,1,2）
-        float[] inputX = {-0.2f, 0f, 0.2f};   // 水平排列
-        float inputY = -0.3f;                  // 垂直位置（较低处）
+        float[][] inputX = {{-0.2f, -0.2f}, {0.2f, 0.2f}, {0f, 0f}};
+        float[][] inputY = {{-0f, 0f}, {-0f, 0f}, {0.3f, 0.3f}};
+        float[][] inputZ = {{0f, -0.3f}, {0f, -0.3f}, {0f, -0.3f}};
         for (int i = 0; i < 3; i++) {
             ItemStack stack = be.inventory.getStackInSlot(i);
+            int itemCount = stack.getCount();
             if (!stack.isEmpty()) {
                 poseStack.pushPose();
-                poseStack.translate(inputX[i], inputY, -0.3f); // 移动到正面开口内
+                poseStack.translate(inputX[i][0], inputY[i][0], inputZ[i][0]); // 移动到正面开口内
                 poseStack.mulPose(Axis.XP.rotationDegrees(90)); // 水平放置
-                poseStack.scale(0.4f, 0.4f, 0.4f);
+                poseStack.scale(0.5f, 0.5f, 0.5f);
                 Minecraft.getInstance().getItemRenderer().renderStatic(
                         stack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
                         be.getLevel(), 0);
                 poseStack.popPose();
+
+                if (itemCount > 1) {
+                    poseStack.pushPose();
+                    poseStack.translate(inputX[i][1], inputY[i][1], inputZ[i][1]); // 移动到正面开口内
+                    poseStack.mulPose(Axis.XP.rotationDegrees(90)); // 水平放置
+                    poseStack.scale(0.5f, 0.5f, 0.5f);
+                    Minecraft.getInstance().getItemRenderer().renderStatic(
+                            stack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
+                            be.getLevel(), 0);
+                    poseStack.popPose();
+                }
             }
         }
 
@@ -61,7 +74,8 @@ public class HighOvenRenderer implements BlockEntityRenderer<HighOvenBlockEntity
         ItemStack fuelStack = be.inventory.getStackInSlot(3);
         if (!fuelStack.isEmpty()) {
             poseStack.pushPose();
-            poseStack.translate(0, 0.1f, -0.1f);
+            poseStack.translate(0.4f, -0.1f, 0f);
+            poseStack.mulPose(Axis.YP.rotationDegrees(90));
             poseStack.scale(0.5f, 0.5f, 0.5f);
             Minecraft.getInstance().getItemRenderer().renderStatic(
                     fuelStack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
@@ -73,7 +87,7 @@ public class HighOvenRenderer implements BlockEntityRenderer<HighOvenBlockEntity
         ItemStack outputStack = be.inventory.getStackInSlot(4);
         if (!outputStack.isEmpty()) {
             poseStack.pushPose();
-            poseStack.translate(0, -0.1f, 0.15f);
+            poseStack.translate(0, -0.1f, 0.4f);
             poseStack.scale(0.5f, 0.5f, 0.5f);
             Minecraft.getInstance().getItemRenderer().renderStatic(
                     outputStack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
