@@ -22,7 +22,12 @@ import javax.annotation.Nullable;
 
 public class EarthAltarBlock extends BaseEntityBlock {
     public EarthAltarBlock(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion());
+    }
+
+    @Override
+    public boolean useShapeForLightOcclusion(BlockState state) {
+        return true;
     }
 
     @Override

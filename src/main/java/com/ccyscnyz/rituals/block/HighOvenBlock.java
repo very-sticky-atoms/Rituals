@@ -55,7 +55,7 @@ public class HighOvenBlock extends BaseEntityBlock {
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     public HighOvenBlock(Properties properties) {
-        super(properties.noOcclusion());
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LIT, false));
