@@ -1,0 +1,11 @@
+{
+  "type": "rituals:high_oven",
+  "inputs": [
+    { "item": "minecraft:sand" },
+    { "item": "minecraft:coal" }
+  ],
+  "fuel": { "item": "minecraft:flint_and_steel" },
+  "output": { "id": "minecraft:diamond", "count": 1 },
+  "chance": 64,
+  "processingTime": 1
+}

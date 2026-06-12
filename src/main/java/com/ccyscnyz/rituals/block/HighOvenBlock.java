@@ -1,10 +1,15 @@
 package com.ccyscnyz.rituals.block;
 
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
+import com.ccyscnyz.rituals.entity.InvulnerableItemEntity;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
@@ -23,6 +28,7 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class HighOvenBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -76,6 +82,16 @@ public class HighOvenBlock extends BaseEntityBlock {
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof HighOvenBlockEntity entity)) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
+        // 超压时无论成功失败都灼伤玩家，并播放蒸汽
+        if (entity.pressure > 0) {
+            player.hurt(level.damageSources().hotFloor(), 1.0F);
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.CLOUD,
+                        pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+                        5, 0.2, 0.1, 0.2, 0.02);
+            }
         }
 
         Direction hitFace = hitResult.getDirection();
@@ -137,25 +153,20 @@ public class HighOvenBlock extends BaseEntityBlock {
                 }
                 return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             }
-        }
-
-        // ---- 背面：输出槽 ----
-        else if (hitFace == facing.getOpposite()) {
-            ItemStack outputStack = entity.inventory.getStackInSlot(4);
-            if (!outputStack.isEmpty()) {
-                ItemStack extracted = entity.inventory.extractItem(4, outputStack.getCount(), false);
-                if (!extracted.isEmpty()) {
-                    if (!player.getInventory().add(extracted)) {
-                        player.drop(extracted, false);
+        } else if (hitFace == facing.getOpposite()) {       //处理逻辑
+            List<ItemStack> items = entity.extractOutput(player);
+            if (!items.isEmpty()) {
+                for (ItemStack s : items) {
+                    if (!player.getInventory().add(s)) {
+                        player.drop(s, false);
                     }
-                    entity.setChanged();
-                    return ItemInteractionResult.SUCCESS;
                 }
+                entity.setChanged();
+                return ItemInteractionResult.SUCCESS;
             }
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
 
-        // 其他面（包括顶部、右侧、底部）不处理，交给默认行为（可放置方块等）
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
@@ -164,12 +175,41 @@ public class HighOvenBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof HighOvenBlockEntity entity) {
+                boolean isOverpressure = entity.pressure >= HighOvenBlockEntity.MAX_PRESSURE;
+
+                // 掉落所有物品(短暂无敌以免疫爆炸)
+                double dropX = pos.getX() + 0.5;
+                double dropY = pos.getY() + 0.5;
+                double dropZ = pos.getZ() + 0.5;
+                int invulnerableDuration = 10; // 0.5秒
+
                 for (int i = 0; i < entity.inventory.getSlots(); i++) {
                     ItemStack stack = entity.inventory.getStackInSlot(i);
                     if (!stack.isEmpty()) {
-                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
+                        level.addFreshEntity(new InvulnerableItemEntity(
+                                level, dropX, dropY, dropZ, stack.copy(), invulnerableDuration));
+                        entity.inventory.setStackInSlot(i, ItemStack.EMPTY);
                     }
                 }
+                for (ItemStack stack : entity.overflowItems) {
+                    level.addFreshEntity(new InvulnerableItemEntity(
+                            level, dropX, dropY, dropZ, stack.copy(), invulnerableDuration));
+                }
+                entity.overflowItems.clear();
+
+                // 超压时触发真实爆炸
+                if (isOverpressure && level instanceof ServerLevel serverLevel) {
+                    serverLevel.explode(
+                        null,
+                        dropX,
+                        dropY,
+                        dropZ,
+                        3.0F, // 爆炸威力
+                        false, // 生成火
+                        Level.ExplosionInteraction.BLOCK //会破坏方块
+                    );
+                }
+
                 level.updateNeighbourForOutputSignal(pos, this);
             }
             super.onRemove(state, level, pos, newState, isMoving);

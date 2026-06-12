@@ -16,7 +16,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public class HighOvenRecipeCategory implements IRecipeCategory<HighOvenRecipe> {
 
@@ -54,13 +57,20 @@ public class HighOvenRecipeCategory implements IRecipeCategory<HighOvenRecipe> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, HighOvenRecipe recipe, IFocusGroup focuses) {
-        // 三个输入槽
+        List<Ingredient> inputs = recipe.getInputs();
+        int inputCount = inputs.size();
+
+        // 动态计算输入槽的起始 Y，使它们垂直居中（30 到 51 范围内）
         int xInput = 30;
-        int yStart = 15;
-        for (int i = 0; i < 3; i++) {
-            builder.addSlot(RecipeIngredientRole.INPUT, xInput, yStart + i * 18)
-                    .addIngredients(recipe.getInputs().get(i));
+        int slotHeight = 18;
+        int totalHeight = inputCount * slotHeight;
+        int startY = 33 - totalHeight / 2; // 以 33 为中心
+
+        for (int i = 0; i < inputCount; i++) {
+            builder.addSlot(RecipeIngredientRole.INPUT, xInput, startY + i * slotHeight)
+                    .addIngredients(inputs.get(i));
         }
+
         // 火种槽
         builder.addSlot(RecipeIngredientRole.INPUT, 65, 33)
                 .addIngredients(recipe.getFuel());
@@ -74,10 +84,10 @@ public class HighOvenRecipeCategory implements IRecipeCategory<HighOvenRecipe> {
                      GuiGraphics guiGraphics, double mouseX, double mouseY) {
         background.draw(guiGraphics);
 
-        String time = "Time: " + recipe.getProcessingTime() + " ticks";
-        if (recipe.getChance() < 1.0F) {
-            time += " (" + (int)(recipe.getChance() * 100) + "%)";
+        String displaystring = "Time: " + recipe.getProcessingTime() + " ticks";
+        if (recipe.getChance() != 1.0F) {
+            displaystring += " (" + (int)(recipe.getChance() * 100) + "%)";
         }
-        guiGraphics.drawString(Minecraft.getInstance().font, time, 60, 65, 0xFF808080, false);
+        guiGraphics.drawString(Minecraft.getInstance().font, displaystring, 60, 65, 0xFF808080, false);
     }
 }
