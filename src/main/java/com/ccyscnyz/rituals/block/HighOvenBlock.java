@@ -7,7 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -31,6 +30,11 @@ public class HighOvenBlock extends BaseEntityBlock {
     public HighOvenBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return simpleCodec(HighOvenBlock::new);
     }
 
     @Override
@@ -63,11 +67,6 @@ public class HighOvenBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return simpleCodec(HighOvenBlock::new);
-    }
-
-    @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                               Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (level.isClientSide()) {
@@ -81,34 +80,15 @@ public class HighOvenBlock extends BaseEntityBlock {
 
         Direction hitFace = hitResult.getDirection();
         Direction facing = state.getValue(FACING);
+        Direction leftSide = facing.getClockWise(); // 为什么要这样获取方向?!?!
 
-        // ---- 正面：火种槽 ----
+        ItemStack held = player.getItemInHand(hand);
+
+        // ---- 正面：输入槽（进料） ----
         if (hitFace == facing) {
-            ItemStack held = player.getItemInHand(hand);
             if (held.isEmpty()) {
-                // 空手取出火种
-                ItemStack extracted = entity.inventory.extractItem(3, 1, false);
-                if (!extracted.isEmpty()) {
-                    player.setItemInHand(hand, extracted);
-                    entity.setChanged();
-                    return ItemInteractionResult.SUCCESS;
-                }
-            } else {
-                // 手持物品放置火种
-                ItemStack remaining = entity.inventory.insertItem(3, held.copy(), false);
-                if (remaining.getCount() < held.getCount()) {
-                    held.setCount(remaining.getCount());
-                    entity.setChanged();
-                    return ItemInteractionResult.SUCCESS;
-                }
-            }
-        }
-        // ---- 顶部：输入槽 ----
-        else if (hitFace == Direction.UP) {
-            ItemStack held = player.getItemInHand(hand);
-            if (held.isEmpty()) {
-                // 空手取出整个输入物品堆栈（取最后一个非空槽）
-                for (int slot : new int[]{2, 1, 0}) {  // 从后往前遍历，优先取最后一个非空槽
+                // 空手：取出整个输入物品堆栈（优先取最后一个非空槽）
+                for (int slot : new int[]{2, 1, 0}) {
                     ItemStack stackInSlot = entity.inventory.getStackInSlot(slot);
                     if (!stackInSlot.isEmpty()) {
                         ItemStack extracted = entity.inventory.extractItem(slot, stackInSlot.getCount(), false);
@@ -119,8 +99,9 @@ public class HighOvenBlock extends BaseEntityBlock {
                         }
                     }
                 }
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             } else {
-                // 手持物品放入输入槽（依次尝试三个槽）
+                // 手持物品：尝试放入输入槽
                 ItemStack remaining = held.copy();
                 for (int slot : new int[]{0, 1, 2}) {
                     remaining = entity.inventory.insertItem(slot, remaining, false);
@@ -131,16 +112,39 @@ public class HighOvenBlock extends BaseEntityBlock {
                     entity.setChanged();
                     return ItemInteractionResult.SUCCESS;
                 }
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
             }
         }
+
+        // ---- 左面：火种槽 ----
+        else if (hitFace == leftSide) {
+            if (held.isEmpty()) {
+                // 空手取出火种（最多1个）
+                ItemStack extracted = entity.inventory.extractItem(3, 1, false);
+                if (!extracted.isEmpty()) {
+                    player.setItemInHand(hand, extracted);
+                    entity.setChanged();
+                    return ItemInteractionResult.SUCCESS;
+                }
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            } else {
+                // 手持物品放置火种
+                ItemStack remaining = entity.inventory.insertItem(3, held.copy(), false);
+                if (remaining.getCount() < held.getCount()) {
+                    held.setCount(remaining.getCount());
+                    entity.setChanged();
+                    return ItemInteractionResult.SUCCESS;
+                }
+                return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            }
+        }
+
         // ---- 背面：输出槽 ----
         else if (hitFace == facing.getOpposite()) {
-            // 取出全部输出物品
             ItemStack outputStack = entity.inventory.getStackInSlot(4);
             if (!outputStack.isEmpty()) {
                 ItemStack extracted = entity.inventory.extractItem(4, outputStack.getCount(), false);
                 if (!extracted.isEmpty()) {
-                    // 尝试放入玩家物品栏，放不下的丢在地上(是的，连这个都得手动？！)
                     if (!player.getInventory().add(extracted)) {
                         player.drop(extracted, false);
                     }
@@ -148,8 +152,10 @@ public class HighOvenBlock extends BaseEntityBlock {
                     return ItemInteractionResult.SUCCESS;
                 }
             }
+            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
 
+        // 其他面（包括顶部、右侧、底部）不处理，交给默认行为（可放置方块等）
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 

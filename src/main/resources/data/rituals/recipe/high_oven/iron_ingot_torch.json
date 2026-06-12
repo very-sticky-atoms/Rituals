@@ -7,6 +7,6 @@
   ],
   "fuel": { "item": "minecraft:torch" },
   "output": { "id": "minecraft:iron_ingot", "count": 1 },
-  "chance": 0.5,
+  "chance": 0.8,
   "processingTime": 200
 }

@@ -7,6 +7,6 @@
   ],
   "fuel": { "item": "minecraft:flint_and_steel" },
   "output": { "id": "minecraft:iron_ingot", "count": 1 },
-  "chance": 0.5,
+  "chance": 1,
   "processingTime": 200
 }

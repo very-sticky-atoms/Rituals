@@ -16,15 +16,16 @@ import java.util.List;
 
 public class HighOvenRecipe implements Recipe<HighOvenRecipeInput> {
 
-    private final List<Ingredient> inputs; // 固定3个
+    private final List<Ingredient> inputs;
     private final Ingredient fuel;
     private final ItemStack output;
     private final float chance;
     private final int processingTime;
 
+    // 构造器：允许 1 ~ 3 个输入
     public HighOvenRecipe(List<Ingredient> inputs, Ingredient fuel, ItemStack output, float chance, int processingTime) {
-        if (inputs.size() != 3) {
-            throw new IllegalArgumentException("HighOvenRecipe must have exactly 3 inputs");
+        if (inputs.size() < 1 || inputs.size() > 3) {
+            throw new IllegalArgumentException("HighOvenRecipe must have between 1 and 3 inputs");
         }
         this.inputs = List.copyOf(inputs);
         this.fuel = fuel;
@@ -35,14 +36,17 @@ public class HighOvenRecipe implements Recipe<HighOvenRecipeInput> {
 
     @Override
     public boolean matches(HighOvenRecipeInput input, Level level) {
+        // 1. 火种必须匹配
         if (!fuel.test(input.fuel())) return false;
 
-        // 无序匹配三个输入
-        List<ItemStack> remaining = new ArrayList<>();
-        remaining.add(input.input0());
-        remaining.add(input.input1());
-        remaining.add(input.input2());
+        // 2. 收集非空的输入槽物品
+        List<ItemStack> notEmptySlots = new ArrayList<>();
+        if (!input.input0().isEmpty()) notEmptySlots.add(input.input0());
+        if (!input.input1().isEmpty()) notEmptySlots.add(input.input1());
+        if (!input.input2().isEmpty()) notEmptySlots.add(input.input2());
 
+        // 3. 复制一份用于匹配（每个物品只能用一次）
+        List<ItemStack> remaining = new ArrayList<>(notEmptySlots);
         for (Ingredient ingredient : inputs) {
             boolean matched = false;
             for (int i = 0; i < remaining.size(); i++) {

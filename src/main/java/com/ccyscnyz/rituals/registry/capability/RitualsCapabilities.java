@@ -23,17 +23,22 @@ public class RitualsCapabilities {
                     if (blockEntity instanceof HighOvenBlockEntity entity) {
                         if (side == null) return null;
                         Direction facing = entity.getBlockState().getValue(HighOvenBlock.FACING);
+                        Direction leftSide = facing.getClockWise();
 
-                        if (side == Direction.UP) {
-                            // 顶部：只插入输入槽
+                        // 正面：输入槽
+                        if (side == facing) {
                             return new SidedItemHandler(entity.inventory, new int[]{0, 1, 2}, new int[]{}, null);
-                        } else if (side == facing) {
-                            // 正面：只插入火种槽，限制1个
+                        }
+                        // 左面：火种槽，限制1个
+                        else if (side == leftSide) {
                             return new SidedItemHandler(entity.inventory, new int[]{3}, new int[]{}, 1);
-                        } else if (side == Direction.DOWN || side == facing.getOpposite()) {
-                            // 底部和背面：只提取输出槽
+                        }
+                        // 底部和背面：输出槽
+                        else if (side == Direction.DOWN || side == facing.getOpposite()) {
                             return new SidedItemHandler(entity.inventory, new int[]{}, new int[]{4}, null);
                         }
+                        // 顶部、右侧等其他面：无漏斗交互
+                        return null;
                     }
                     return null;
                 }
