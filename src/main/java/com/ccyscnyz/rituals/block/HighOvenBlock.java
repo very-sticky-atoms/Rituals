@@ -28,19 +28,53 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class HighOvenBlock extends BaseEntityBlock {
+    private static final VoxelShape SHAPE = Stream.of(
+            // 底部
+            Block.box(0, 0, 0, 16, 4, 16),
+            // 背面
+            Block.box(0, 4, 12, 16, 16, 16),
+            // 左侧
+            Block.box(0, 4, 0, 4, 16, 16),
+            // 右侧
+            Block.box(12, 4, 0, 16, 16, 16),
+            // 顶部
+            Block.box(0, 12, 0, 16, 16, 16)
+    ).reduce((v1, v2) -> Shapes.or(v1, v2)).get();
+
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     public HighOvenBlock(Properties properties) {
-        super(properties);
+        super(properties.noOcclusion());
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LIT, false));
+    }
+
+    /*
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    protected VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
+        return SHAPE;
+    }
+     */
+
+    @Override
+    public boolean useShapeForLightOcclusion(BlockState state) {
+        return true;
     }
 
     @Override
