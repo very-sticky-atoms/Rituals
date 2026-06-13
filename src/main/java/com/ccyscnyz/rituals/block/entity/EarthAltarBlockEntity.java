@@ -1,12 +1,12 @@
 package com.ccyscnyz.rituals.block.entity;
 
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
-import com.ccyscnyz.rituals.recipe.EarthAltarRecipeInput;
-import com.ccyscnyz.rituals.recipe.EarthAltarRecipeOutput;
+import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -47,72 +47,43 @@ public class EarthAltarBlockEntity extends BlockEntity {
     };
 
     private int craftProgress = 0;
-    private int maxCraftTime = 100;
+    private int maxCraftTime;
+    private Optional<EarthAltarRecipe> currentRecipe = Optional.empty();
 
     public EarthAltarBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.EARTH_ALTAR.get(), pos, state);
     }
 
     // 八个方向偏移（依次北、东北、东、东南、南、西南、西、西北）
-    private static final BlockPos[] DIRECTION_OFFSETS = {
-            new BlockPos(0, 0, -1),
-            new BlockPos(1, 0, -1),
-            new BlockPos(1, 0, 0),
-            new BlockPos(1, 0, 1),
-            new BlockPos(0, 0, 1),
-            new BlockPos(-1, 0, 1),
-            new BlockPos(-1, 0, 0),
-            new BlockPos(-1, 0, -1),
+    private static final Vec3i[] DIRECTION_OFFSETS = {
+            new Vec3i(0, 0, -1),
+            new Vec3i(1, 0, -1),
+            new Vec3i(1, 0, 0),
+            new Vec3i(1, 0, 1),
+            new Vec3i(0, 0, 1),
+            new Vec3i(-1, 0, 1),
+            new Vec3i(-1, 0, 0),
+            new Vec3i(-1, 0, -1),
     };
 
 
     //检测仪式柱
-    private Map<Integer, List<BlockPos>> detectPillars() {
-        Map<Integer, List<PillarEntry>> entries = new HashMap<>();
-        for (int i = 0; i < 8; i++) {
-            entries.put(i, new ArrayList<>());
-        }
-
+    private Map<Integer, List<RitualPillarBlockEntity>> detectPillars() {
+        Map<Integer, List<RitualPillarBlockEntity>> entries = new HashMap<>();
         if (level == null) return new HashMap<>();
-
         int radius = 5;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                if (dx == 0 && dz == 0) continue;
-                BlockPos checkPos = worldPosition.offset(dx, 0, dz);
-                if (level.getBlockEntity(checkPos) instanceof RitualPillarBlockEntity) {
-                    int dirIndex = getDirectionIndex(dx, dz);
-                    if (dirIndex >= 0) {
-                        int distance = Math.abs(dx) + Math.abs(dz);
-                        entries.get(dirIndex).add(new PillarEntry(checkPos, distance));
-                    }
+        for (int dir = 0; dir < 8; dir++) {
+            List<RitualPillarBlockEntity> detectResult = new ArrayList<>();
+            for (int r = 1; r<=radius; r++) {
+                BlockEntity block = level.getBlockEntity(this.worldPosition.offset(DIRECTION_OFFSETS[dir]));
+                if (block instanceof RitualPillarBlockEntity pillar) {
+                    detectResult.add(pillar);
                 }
             }
+            entries.put(dir, detectResult);
         }
 
-        // 每个方向按距离排序，并提取坐标
-        Map<Integer, List<BlockPos>> result = new HashMap<>();
-        for (int i = 0; i < 8; i++) {
-            result.put(i, entries.get(i).stream()
-                    .sorted(Comparator.comparingInt(PillarEntry::distance))
-                    .map(PillarEntry::pos)
-                    .collect(Collectors.toList()));
-        }
-        return result;
-    }
-
-    private record PillarEntry(BlockPos pos, int distance) {}
-
-    private int getDirectionIndex(int dx, int dz) {
-        if (dx == 0 && dz < 0) return 0;
-        if (dx > 0 && dz < 0) return 1;
-        if (dx > 0 && dz == 0) return 2;
-        if (dx > 0 && dz > 0) return 3;
-        if (dx == 0 && dz > 0) return 4;
-        if (dx < 0 && dz > 0) return 5;
-        if (dx < 0 && dz == 0) return 6;
-        if (dx < 0 && dz < 0) return 7;
-        return -1;
+        return entries;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EarthAltarBlockEntity entity) {
@@ -122,21 +93,19 @@ public class EarthAltarBlockEntity extends BlockEntity {
             return;
         }
 
-        Map<Integer, List<BlockPos>> pillars = entity.detectPillars();
+        Map<Integer, List<RitualPillarBlockEntity>> pillars = entity.detectPillars();
         List<List<ItemStack>> directionItems = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             List<ItemStack> items = new ArrayList<>();
-            for (BlockPos pillarPos : pillars.get(i)) {
-                if (level.getBlockEntity(pillarPos) instanceof RitualPillarBlockEntity pillar) {
-                    items.add(pillar.inventory.getStackInSlot(0));
-                }
+            for (RitualPillarBlockEntity pillar : pillars.get(i)) {
+                items.add(pillar.inventory.getStackInSlot(0));
             }
             directionItems.add(items);
         }
 
-        EarthAltarRecipeInput input = new EarthAltarRecipeInput(centerStack, directionItems);
+        EarthAltarRecipeContext context = new EarthAltarRecipeContext(centerStack, directionItems, level, entity.worldPosition);
         var recipeHolder = level.getRecipeManager().getRecipeFor(
-                RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(), input, level);
+                RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(), context, level);
 
         if (recipeHolder.isEmpty()) {
             entity.craftProgress = 0;
@@ -144,7 +113,12 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         EarthAltarRecipe recipe = recipeHolder.get().value();
-        entity.maxCraftTime = recipe.getProcessingTime();
+        ResourceLocation recipeId = recipeHolder.get().id();
+        if(entity.currentRecipe.isEmpty() || !entity.currentRecipe.get().equals(recipe)){
+            entity.craftProgress = 0;
+            entity.currentRecipe = Optional.of(recipe);
+            entity.maxCraftTime = recipe.runStartScript(recipeId,context);
+        }
         entity.craftProgress++;
 
         if (entity.craftProgress > 0 && level.getGameTime() % 8 == 0) { // 每4 tick播放一次
@@ -156,43 +130,17 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         if (entity.craftProgress >= entity.maxCraftTime) {
-            // 收集消耗的物品和坐标
-            List<List<ItemStack>> consumedItems = new ArrayList<>(8);
-            List<List<BlockPos>> consumedPositions = new ArrayList<>(8);
-            for (int i = 0; i < 8; i++) {
-                consumedItems.add(new ArrayList<>());
-                consumedPositions.add(new ArrayList<>());
-            }
-
-            // 消耗八个方向的物品
+            EarthAltarRecipeContext contextNew = recipe.runFinishScript(recipeId,context);
             for (int dir = 0; dir < 8; dir++) {
-                int needed = recipe.getInputsForDirection(dir).size();
-                int consumed = 0;
-                for (BlockPos pillarPos : pillars.get(dir)) {
-                    if (consumed >= needed) break;
-                    if (level.getBlockEntity(pillarPos) instanceof RitualPillarBlockEntity pillar) {
-                        ItemStack extracted = pillar.inventory.extractItem(0, 1, false);
-                        if (!extracted.isEmpty()) {
-                            consumedItems.get(dir).add(extracted.copy());
-                            consumedPositions.get(dir).add(pillarPos);
-                            consumed++;
-                        }
-                    }
+                for (int i = 1; i < pillars.get(dir).size(); i++) {
+                    RitualPillarBlockEntity pillar = pillars.get(dir).get(i);
+                    pillar.inventory.extractItem(0, 1, false);
+                    pillar.inventory.setStackInSlot(0,contextNew.directionItems().get(dir).get(i));
                 }
             }
 
-            // 获取最终输出（可能包含输入修改器）
-            ResourceLocation recipeId = recipeHolder.get().id();
-            EarthAltarRecipeOutput assembled = recipe.getAssembledOutput(recipeId, input, level, pos);
-
-            // 替换中心物品
             entity.inventory.extractItem(0, 1, false);
-            entity.inventory.setStackInSlot(0, assembled.output());
-
-            // 执行输入修改器（如果有）
-            if (assembled.inputModifier() != null) {
-                assembled.inputModifier().modify(consumedItems, consumedPositions, level, pos);
-            }
+            entity.inventory.setStackInSlot(0, contextNew.center().copy());
 
             entity.craftProgress = 0;
 

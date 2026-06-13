@@ -3,7 +3,7 @@ package com.ccyscnyz.rituals.recipe;
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeSerializers;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
-import com.ccyscnyz.rituals.script.EarthAltarScriptEngine;
+import com.ccyscnyz.rituals.script.RitualsScriptEngine;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,32 +19,37 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
 import javax.script.ScriptException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
+public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
     private final Ingredient center;
     private final List<List<Ingredient>> inputs;
     private final ItemStack output;
     private final int processingTime;
-    private final Optional<String> script;
+    private final Optional<String> craftStartScript;
+    private final Optional<String> craftFinishScript; // 新增：JS 脚本内容
 
     public EarthAltarRecipe(Ingredient center, List<List<Ingredient>> inputs, ItemStack output,
-                            int processingTime, Optional<String> script) {
+                            int processingTime, Optional<String> craftStartScript, Optional<String> craftFinishScript) {
         if (inputs.size() != 8) throw new IllegalArgumentException("Must have exactly 8 directions");
         this.center = center;
         this.inputs = List.copyOf(inputs);
         this.output = output;
         this.processingTime = processingTime;
-        this.script = script;
+        this.craftStartScript = craftStartScript;
+        this.craftFinishScript = craftFinishScript;
     }
 
     @Override
-    public boolean matches(EarthAltarRecipeInput input, Level level) {
-        if (!center.test(input.getCenter())) return false;
+    public boolean matches(EarthAltarRecipeContext input, Level level) {
+        if (!center.test(input.center())) return false;
         for (int dir = 0; dir < 8; dir++) {
             List<Ingredient> required = inputs.get(dir);
-            List<ItemStack> actual = input.getDirection(dir);
+            List<ItemStack> actual = input.directionItems().get(dir);
             List<ItemStack> nonEmptyActual = new ArrayList<>();
             for (ItemStack stack : actual) {
                 if (!stack.isEmpty()) nonEmptyActual.add(stack);
@@ -57,53 +62,80 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
         return true;
     }
 
-    /**
-     * 获取最终输出及可能的输入修改器。
-     * 优先级：脚本 > 配方默认输出
-     */
-    public EarthAltarRecipeOutput getAssembledOutput(ResourceLocation recipeId, EarthAltarRecipeInput input,
-                                                     Level level, BlockPos pos) {
-        if (script.isPresent() && !script.get().isEmpty()) {
+    public int runStartScript(ResourceLocation recipeId, EarthAltarRecipeContext context) {
+        // JSON脚本
+        if (craftStartScript.isPresent() && !craftStartScript.get().isEmpty()) {
+            Rituals.LOGGER.debug("Executing script for recipe {}: {}", recipeId, craftStartScript.get());
             try {
-                Map<String, Object> bindings = new HashMap<>();
-                bindings.put("level", level);
-                bindings.put("pos", pos);
-                bindings.put("center", input.getCenter().copy()); // 传入副本
-                bindings.put("directions", input.directionItems()); // List<List<ItemStack>>
-                EarthAltarRecipeOutput scriptResult = EarthAltarScriptEngine.executeCached(recipeId, script.get(), bindings);
-                if (scriptResult != null) {
+                Map<String, Object> bindings = new java.util.HashMap<>();
+                bindings.put("context",context.copy());
+                int scriptResult =(int) RitualsScriptEngine.EarthAltar.executeCached(recipeId, craftStartScript.get(), bindings);
+                    Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                     return scriptResult;
+            } catch (ScriptException e) {
+                Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
+            }
+        }
+
+        // 默认输出
+        return this.processingTime;
+    }
+    //获取最终产物（优先级: 脚本 > 默认输出）
+    public EarthAltarRecipeContext runFinishScript(ResourceLocation recipeId, EarthAltarRecipeContext context) {
+
+        // JSON脚本
+        if (craftFinishScript.isPresent() && !craftFinishScript.get().isEmpty()) {
+            Rituals.LOGGER.debug("Executing script for recipe {}: {}", recipeId, craftFinishScript.get());
+            try {
+                Map<String, Object> bindings = new java.util.HashMap<>();
+                bindings.put("context",context.copy());
+                EarthAltarRecipeContext scriptResult = (EarthAltarRecipeContext) RitualsScriptEngine.EarthAltar.executeCached(recipeId, craftFinishScript.get(), bindings);
+                if (scriptResult != null) {
+                    Rituals.LOGGER.debug("Script returned: {}", scriptResult);
+                    return scriptResult;
+                } else {
+                    Rituals.LOGGER.debug("Script returned null, using default output.");
                 }
             } catch (ScriptException e) {
                 Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
             }
         }
+
         // 默认输出
-        return new EarthAltarRecipeOutput(output.copy(), null);
+        return context.with(output.copy());
     }
 
     @Override
-    public ItemStack assemble(EarthAltarRecipeInput input, net.minecraft.core.HolderLookup.Provider registries) {
+    public ItemStack assemble(EarthAltarRecipeContext input, net.minecraft.core.HolderLookup.Provider registries) {
         return output.copy();
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) { return true; }
+    public boolean canCraftInDimensions(int width, int height) {
+        return true;
+    }
 
     @Override
-    public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) { return output.copy(); }
+    public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
+        return output.copy();
+    }
+
     public ItemStack getResultItem() { return output.copy(); }
 
     @Override
-    public RecipeSerializer<?> getSerializer() { return RitualsRecipeSerializers.EARTH_ALTAR_SERIALIZER.get(); }
+    public RecipeSerializer<?> getSerializer() {
+        return RitualsRecipeSerializers.EARTH_ALTAR_SERIALIZER.get();
+    }
 
     @Override
-    public RecipeType<?> getType() { return RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(); }
+    public RecipeType<?> getType() {
+        return RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get();
+    }
 
     public Ingredient getCenter() { return center; }
     public List<Ingredient> getInputsForDirection(int dir) { return inputs.get(dir); }
     public int getProcessingTime() { return processingTime; }
-    public Optional<String> getScript() { return script; }
+    public Optional<String> getCraftFinishScript() { return craftFinishScript; }
 
     // ---- Codec ----
     public static final MapCodec<EarthAltarRecipe> CODEC = RecordCodecBuilder.mapCodec(instance ->
@@ -112,7 +144,8 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                     Codec.list(Codec.list(Ingredient.CODEC)).fieldOf("inputs").forGetter(r -> r.inputs),
                     ItemStack.CODEC.fieldOf("output").forGetter(r -> r.output),
                     Codec.INT.fieldOf("processingTime").forGetter(r -> r.processingTime),
-                    Codec.STRING.optionalFieldOf("script").forGetter(r -> r.script)
+                    Codec.STRING.optionalFieldOf("craftStartScript").forGetter(r -> r.craftStartScript),
+                    Codec.STRING.optionalFieldOf("craftFinishScript").forGetter(r -> r.craftFinishScript)
             ).apply(instance, EarthAltarRecipe::new)
     );
 
@@ -130,8 +163,10 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                         }
                         ItemStack.STREAM_CODEC.encode(buf, recipe.output);
                         buf.writeInt(recipe.processingTime);
-                        buf.writeBoolean(recipe.script.isPresent());
-                        recipe.script.ifPresent(buf::writeUtf);
+                        buf.writeBoolean(recipe.craftStartScript.isPresent());
+                        recipe.craftStartScript.ifPresent(buf::writeUtf);
+                        buf.writeBoolean(recipe.craftFinishScript.isPresent());
+                        recipe.craftFinishScript.ifPresent(buf::writeUtf);
                     },
                     buf -> {
                         Ingredient center = Ingredient.CONTENTS_STREAM_CODEC.decode(buf);
@@ -147,9 +182,11 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                         }
                         ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
                         int time = buf.readInt();
-                        Optional<String> script = buf.readBoolean() ?
+                        Optional<String> craftStartScript = buf.readBoolean() ?
                                 Optional.of(buf.readUtf()) : Optional.empty();
-                        return new EarthAltarRecipe(center, inputs, output, time, script);
+                        Optional<String> craftFinishScript = buf.readBoolean() ?
+                                Optional.of(buf.readUtf()) : Optional.empty();
+                        return new EarthAltarRecipe(center, inputs, output, time, craftStartScript, craftFinishScript);
                     }
             );
 
