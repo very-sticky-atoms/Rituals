@@ -151,6 +151,9 @@ dependencies {
     localRuntime("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}")
     compileOnly ("curse.maven:jade-324717:6667790")
     runtimeOnly ("curse.maven:jade-324717:6667790")
+
+    implementation 'org.graalvm.js:js:24.1.0'
+    implementation 'org.graalvm.js:js-scriptengine:24.1.0'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -188,6 +191,7 @@ publishing {
         maven {
             url "file://${project.projectDir}/repo"
         }
+        mavenCentral()
     }
 }
 
