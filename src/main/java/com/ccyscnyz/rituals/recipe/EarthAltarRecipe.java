@@ -23,13 +23,15 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
     private final List<List<Ingredient>> inputs; // 8个方向，每个方向是一个有序列表
     private final ItemStack output;
     private final int processingTime;
+    private final String recipeAction;  // 新增：配方动作标识
 
-    public EarthAltarRecipe(Ingredient center, List<List<Ingredient>> inputs, ItemStack output, int processingTime) {
+    public EarthAltarRecipe(Ingredient center, List<List<Ingredient>> inputs, ItemStack output, int processingTime, String recipeAction) {
         if (inputs.size() != 8) throw new IllegalArgumentException("Must have exactly 8 directions");
         this.center = center;
         this.inputs = List.copyOf(inputs);
         this.output = output;
         this.processingTime = processingTime;
+        this.recipeAction = recipeAction != null ? recipeAction : "";
     }
 
     @Override
@@ -95,6 +97,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
     public Ingredient getCenter() { return center; }
     public List<Ingredient> getInputsForDirection(int dir) { return inputs.get(dir); }
     public int getProcessingTime() { return processingTime; }
+    public String getRecipeAction() { return recipeAction; }  // 新增 getter
 
     // ---- Codec ----
     public static final MapCodec<EarthAltarRecipe> CODEC = RecordCodecBuilder.mapCodec(instance ->
@@ -104,7 +107,8 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                             .fieldOf("inputs")
                             .forGetter(r -> r.inputs),
                     ItemStack.CODEC.fieldOf("output").forGetter(r -> r.output),
-                    Codec.INT.fieldOf("processingTime").forGetter(r -> r.processingTime)
+                    Codec.INT.fieldOf("processingTime").forGetter(r -> r.processingTime),
+                    Codec.STRING.optionalFieldOf("recipeaction", "").forGetter(r -> r.recipeAction)
             ).apply(instance, EarthAltarRecipe::new)
     );
 
@@ -122,6 +126,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                         }
                         ItemStack.STREAM_CODEC.encode(buf, recipe.output);
                         buf.writeInt(recipe.processingTime);
+                        buf.writeUtf(recipe.recipeAction);  // 写入字符串
                     },
                     buf -> {
                         Ingredient center = Ingredient.CONTENTS_STREAM_CODEC.decode(buf);
@@ -137,7 +142,8 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
                         }
                         ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
                         int time = buf.readInt();
-                        return new EarthAltarRecipe(center, inputs, output, time);
+                        String action = buf.readUtf();       // 读取字符串
+                        return new EarthAltarRecipe(center, inputs, output, time, action);
                     }
             );
 
