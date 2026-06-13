@@ -19,11 +19,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
 import javax.script.ScriptException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
 
@@ -31,31 +27,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
     private final List<List<Ingredient>> inputs;
     private final ItemStack output;
     private final int processingTime;
-    private final Optional<String> script; // 新增：JS 脚本内容
-
-    // 输出修改器注册表
-    private static final Map<ResourceLocation, OutputModifier> MODIFIERS = new ConcurrentHashMap<>();
-
-    @FunctionalInterface
-    public interface OutputModifier {
-        ItemStack modify(EarthAltarRecipe recipe, EarthAltarRecipeInput input, Level level, BlockPos pos);
-    }
-
-    public static void registerModifier(ResourceLocation recipeId, OutputModifier modifier) {
-        MODIFIERS.put(recipeId, modifier);
-    }
-
-    public static void unregisterModifier(ResourceLocation recipeId) {
-        MODIFIERS.remove(recipeId);
-    }
-
-    public static void registerModifiers(List<ResourceLocation> recipeIds, OutputModifier modifier) {
-        recipeIds.forEach(id -> MODIFIERS.put(id, modifier));
-    }
-
-    public static void unregisterModifiers(List<ResourceLocation> recipeIds) {
-        recipeIds.forEach(MODIFIERS::remove);
-    }
+    private final Optional<String> script;
 
     public EarthAltarRecipe(Ingredient center, List<List<Ingredient>> inputs, ItemStack output,
                             int processingTime, Optional<String> script) {
@@ -85,39 +57,29 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
         return true;
     }
 
-    //获取最终产物（优先级：修改器 > 脚本 > 默认输出）
-    public ItemStack getAssembledOutput(ResourceLocation recipeId, EarthAltarRecipeInput input,
-                                        Level level, BlockPos pos) {
-        // 外部注册的修改器
-        OutputModifier modifier = MODIFIERS.get(recipeId);
-        if (modifier != null) {
-            ItemStack modified = modifier.modify(this, input, level, pos);
-            if (modified != null) return modified;
-        }
-
-        // JSON脚本
+    /**
+     * 获取最终输出及可能的输入修改器。
+     * 优先级：脚本 > 配方默认输出
+     */
+    public EarthAltarRecipeOutput getAssembledOutput(ResourceLocation recipeId, EarthAltarRecipeInput input,
+                                                     Level level, BlockPos pos) {
         if (script.isPresent() && !script.get().isEmpty()) {
-            Rituals.LOGGER.debug("Executing script for recipe {}: {}", recipeId, script.get());
             try {
-                Map<String, Object> bindings = new java.util.HashMap<>();
+                Map<String, Object> bindings = new HashMap<>();
                 bindings.put("level", level);
                 bindings.put("pos", pos);
-                bindings.put("center", input.getCenter());
-                bindings.put("directions", input.directionItems());
-                ItemStack scriptResult = EarthAltarScriptEngine.executeCached(recipeId, script.get(), bindings);
+                bindings.put("center", input.getCenter().copy()); // 传入副本
+                bindings.put("directions", input.directionItems()); // List<List<ItemStack>>
+                EarthAltarRecipeOutput scriptResult = EarthAltarScriptEngine.executeCached(recipeId, script.get(), bindings);
                 if (scriptResult != null) {
-                    Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                     return scriptResult;
-                } else {
-                    Rituals.LOGGER.debug("Script returned null, using default output.");
                 }
             } catch (ScriptException e) {
                 Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
             }
         }
-
         // 默认输出
-        return output.copy();
+        return new EarthAltarRecipeOutput(output.copy(), null);
     }
 
     @Override
@@ -126,26 +88,17 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeInput> {
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return true;
-    }
+    public boolean canCraftInDimensions(int width, int height) { return true; }
 
     @Override
-    public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
-        return output.copy();
-    }
-
+    public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) { return output.copy(); }
     public ItemStack getResultItem() { return output.copy(); }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
-        return RitualsRecipeSerializers.EARTH_ALTAR_SERIALIZER.get();
-    }
+    public RecipeSerializer<?> getSerializer() { return RitualsRecipeSerializers.EARTH_ALTAR_SERIALIZER.get(); }
 
     @Override
-    public RecipeType<?> getType() {
-        return RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get();
-    }
+    public RecipeType<?> getType() { return RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(); }
 
     public Ingredient getCenter() { return center; }
     public List<Ingredient> getInputsForDirection(int dir) { return inputs.get(dir); }

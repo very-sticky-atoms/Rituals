@@ -2,6 +2,7 @@ package com.ccyscnyz.rituals.block.entity;
 
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipeInput;
+import com.ccyscnyz.rituals.recipe.EarthAltarRecipeOutput;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import net.minecraft.core.BlockPos;
@@ -155,25 +156,44 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         if (entity.craftProgress >= entity.maxCraftTime) {
-            // 消耗物品
+            // 收集消耗的物品和坐标
+            List<List<ItemStack>> consumedItems = new ArrayList<>(8);
+            List<List<BlockPos>> consumedPositions = new ArrayList<>(8);
+            for (int i = 0; i < 8; i++) {
+                consumedItems.add(new ArrayList<>());
+                consumedPositions.add(new ArrayList<>());
+            }
+
+            // 消耗八个方向的物品
             for (int dir = 0; dir < 8; dir++) {
                 int needed = recipe.getInputsForDirection(dir).size();
                 int consumed = 0;
                 for (BlockPos pillarPos : pillars.get(dir)) {
                     if (consumed >= needed) break;
                     if (level.getBlockEntity(pillarPos) instanceof RitualPillarBlockEntity pillar) {
-                        pillar.inventory.extractItem(0, 1, false);
-                        consumed++;
+                        ItemStack extracted = pillar.inventory.extractItem(0, 1, false);
+                        if (!extracted.isEmpty()) {
+                            consumedItems.get(dir).add(extracted.copy());
+                            consumedPositions.get(dir).add(pillarPos);
+                            consumed++;
+                        }
                     }
                 }
             }
 
-            // 获取配方 ID 并调用修改器
+            // 获取最终输出（可能包含输入修改器）
             ResourceLocation recipeId = recipeHolder.get().id();
-            ItemStack finalOutput = recipe.getAssembledOutput(recipeId, input, level, pos);
+            EarthAltarRecipeOutput assembled = recipe.getAssembledOutput(recipeId, input, level, pos);
 
+            // 替换中心物品
             entity.inventory.extractItem(0, 1, false);
-            entity.inventory.setStackInSlot(0, finalOutput);
+            entity.inventory.setStackInSlot(0, assembled.output());
+
+            // 执行输入修改器（如果有）
+            if (assembled.inputModifier() != null) {
+                assembled.inputModifier().modify(consumedItems, consumedPositions, level, pos);
+            }
+
             entity.craftProgress = 0;
 
             if (level instanceof ServerLevel serverLevel) {
