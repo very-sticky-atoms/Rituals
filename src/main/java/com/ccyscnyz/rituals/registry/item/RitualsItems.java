@@ -14,6 +14,11 @@ public class RitualsItems {
             DeferredRegister.createItems(Rituals.MODID);
 
     @TabItem("rituals_tab")
+    public static final DeferredItem<Item> STEEL_INGOT = ITEMS.register("steel_ingot",
+            () -> new Item(new Item.Properties()));
+
+
+    @TabItem("rituals_tab")
     public static final DeferredItem<Item> COPPER_PICKAXE = ITEMS.register("copper_pickaxe",
             () -> new PickaxeItem(RitualsTiers.COPPER, new Item.Properties()));
     @TabItem("rituals_tab")
@@ -22,6 +27,7 @@ public class RitualsItems {
     @TabItem("rituals_tab")
     public static final DeferredItem<Item> OBSIDIAN_PICKAXE = ITEMS.register("obsidian_pickaxe",
             () -> new PickaxeItem(RitualsTiers.OBSIDIAN, new Item.Properties()));
+
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
