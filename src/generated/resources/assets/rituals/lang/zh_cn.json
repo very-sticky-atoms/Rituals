@@ -1,0 +1,13 @@
+{
+  "block.rituals.earth_altar": "大地祭坛",
+  "block.rituals.high_oven": "高炉",
+  "block.rituals.ritual_pillar": "仪式柱",
+  "creativetab.rituals": "仪式",
+  "item.rituals.copper_pickaxe": "铜镐",
+  "item.rituals.obsidian_pickaxe": "黑曜石镐",
+  "item.rituals.steel_ingot": "钢锭",
+  "item.rituals.steel_pickaxe": "钢镐",
+  "itemGroup.rituals.rituals_tab": "仪式",
+  "jei.rituals.earth_altar": "大地祭坛",
+  "jei.rituals.high_oven": "高炉"
+}

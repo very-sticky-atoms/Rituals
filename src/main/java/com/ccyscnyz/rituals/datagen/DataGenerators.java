@@ -25,5 +25,17 @@ public class DataGenerators {
                 new ModLootTableProvider(generator.getPackOutput(), lookupProvider)
         );
 
+
+
+
+        generator.addProvider(
+                event.includeClient(),
+                new RitualsLanguageProvider(generator.getPackOutput(), "en_us")
+        );
+        generator.addProvider(
+                event.includeClient(),
+                new RitualsLanguageProvider(generator.getPackOutput(), "zh_cn")
+        );
+
     }
 }
