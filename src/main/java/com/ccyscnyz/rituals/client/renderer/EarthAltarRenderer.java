@@ -34,7 +34,6 @@ public class EarthAltarRenderer implements BlockEntityRenderer<EarthAltarBlockEn
 
         long gameTime = be.getLevel().getGameTime();
         float angle = gameTime * speed;
-        System.out.println(String.valueOf((float) progress / maxProgress) + " " + String.valueOf(maxProgress) + " " + String.valueOf(speed));
 
         poseStack.pushPose();
         // 移动到方块中心上方

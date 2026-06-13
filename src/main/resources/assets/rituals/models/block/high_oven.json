@@ -7,7 +7,7 @@
 		"1": "rituals:block/high_oven",
 		"2": "rituals:block/high_oven_inputbox",
 		"3": "rituals:block/high_oven_outputbox",
-		"particle": "rituals:block/high_oven"
+		"particle": "rituals:block/high_oven_inputbox"
 	},
 	"elements": [
 		{
