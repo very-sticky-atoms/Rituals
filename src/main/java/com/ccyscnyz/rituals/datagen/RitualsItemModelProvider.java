@@ -16,7 +16,7 @@ import java.util.Set;
 
 public class RitualsItemModelProvider extends ItemModelProvider {
 
-    // 排除列表：不自动生成模型的物品 ID
+    // 排除列表：不自动生成模型
     private static final Set<ResourceLocation> EXCLUDED = Set.of(
             // ResourceLocation.fromNamespaceAndPath(Rituals.MODID, "excluded_item")
     );
@@ -30,8 +30,7 @@ public class RitualsItemModelProvider extends ItemModelProvider {
         for (Item item : BuiltInRegistries.ITEM) {
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
             if (!Objects.equals(itemId.getNamespace(), Rituals.MODID)) continue;
-            if (EXCLUDED.contains(itemId)) continue;   // 跳过排除物品
-
+            if (EXCLUDED.contains(itemId)) continue;
             if (item instanceof BlockItem blockItem) {
                 // BlockItem：继承方块模型
                 ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock());

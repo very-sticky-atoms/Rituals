@@ -67,11 +67,6 @@ public class HighOvenBlock extends BaseEntityBlock {
         return true; // 天空光向下穿透
     }
 
-    @Override
-    public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return false; // 非完整遮光方块
-    }
-
     // 发光
     @Override
     public int getLightEmission(BlockState state, BlockGetter level, BlockPos pos) {
