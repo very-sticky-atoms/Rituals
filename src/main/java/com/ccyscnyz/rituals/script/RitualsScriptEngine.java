@@ -57,24 +57,14 @@ public class RitualsScriptEngine {
                     Bindings scriptBindings = engine.createBindings();
                     scriptBindings.putAll(bindings);
                     Object result = engine.eval(wrappedScript, scriptBindings);
-                    return parseResult(result);
+                    return result;
                 }
             }
 
             Bindings scriptBindings = engine.createBindings();
             scriptBindings.putAll(bindings);
             Object result = compiled.eval(scriptBindings);
-            return parseResult(result);
-        }
-
-        private static ItemStack parseResult(Object result) {
-            if (result instanceof String itemStr) {
-                ResourceLocation itemId = ResourceLocation.tryParse(itemStr);
-                if (itemId != null && BuiltInRegistries.ITEM.containsKey(itemId)) {
-                    return new ItemStack(BuiltInRegistries.ITEM.get(itemId));
-                }
-            }
-            return null;
+            return result;
         }
     }
 }

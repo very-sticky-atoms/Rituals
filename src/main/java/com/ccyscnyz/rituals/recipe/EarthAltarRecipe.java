@@ -19,10 +19,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
 import javax.script.ScriptException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
@@ -100,9 +97,14 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
             }
         }
-
+        List<List<ItemStack>> consumed = new ArrayList<>();
+        for(int dir =0; dir < 8; dir++){
+            List<ItemStack> consumedDirection = new ArrayList<>(this.inputs.get(dir).size());
+            Collections.fill(consumedDirection,ItemStack.EMPTY);
+            consumed.add(consumedDirection);
+        }
         // 默认输出
-        return context.with(output.copy());
+        return context.with(output.copy()).with(consumed);
     }
 
     @Override
