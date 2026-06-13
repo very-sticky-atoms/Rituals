@@ -41,7 +41,7 @@ public class HighOvenRenderer implements BlockEntityRenderer<HighOvenBlockEntity
 
         // 渲染三个输入槽（槽0,1,2）
         float[][] inputX = {{-0.2f, -0.2f}, {0.2f, 0.2f}, {0f, 0f}};
-        float[][] inputY = {{-0f, 0f}, {-0f, 0f}, {0.2f, 0.2f}};
+        float[][] inputY = {{0.1f, 0.1f}, {0.1f, 0.1f}, {0.3f, 0.3f}};
         float[][] inputZ = {{0f, -0.3f}, {0f, -0.3f}, {0f, -0.3f}};
         for (int i = 0; i < 3; i++) {
             ItemStack stack = be.inventory.getStackInSlot(i);
@@ -85,15 +85,20 @@ public class HighOvenRenderer implements BlockEntityRenderer<HighOvenBlockEntity
         // 渲染输出槽（槽4）
         ItemStack outputStack = be.inventory.getStackInSlot(4);
         if (!outputStack.isEmpty()) {
-            poseStack.pushPose();
-            poseStack.translate(0, -0.1f, 0.4f);
-            poseStack.scale(0.5f, 0.5f, 0.5f);
-            Minecraft.getInstance().getItemRenderer().renderStatic(
-                    outputStack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
-                    be.getLevel(), 0);
-            poseStack.popPose();
+            int count = outputStack.getCount();
+            int layers = Math.min(count, 6); // 最多堆叠3个
+            for (int i = 0; i < layers; i++) {
+                poseStack.pushPose();
+                // 在原来的位置上，每个模型向上偏移 i * 0.05f
+                poseStack.translate(0, -0.35f + i * 0.05f, 0.3f);
+                poseStack.mulPose(Axis.XN.rotationDegrees(90));
+                poseStack.scale(0.5f, 0.5f, 0.5f);
+                Minecraft.getInstance().getItemRenderer().renderStatic(
+                        outputStack, ItemDisplayContext.FIXED, packedLight, packedOverlay, poseStack, bufferSource,
+                        be.getLevel(), 0);
+                poseStack.popPose();
+            }
         }
-
         poseStack.popPose();
     }
 }

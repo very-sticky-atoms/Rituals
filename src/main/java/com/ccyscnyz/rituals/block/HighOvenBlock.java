@@ -12,6 +12,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -26,6 +29,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 
 import javax.annotation.Nullable;
@@ -239,6 +243,18 @@ public class HighOvenBlock extends BaseEntityBlock {
 
                 // 超压时爆炸
                 if (isOverpressure && level instanceof ServerLevel serverLevel) {
+
+                    float radius = 3.0F;
+                    DamageSource damageSource = level.damageSources().hotFloor();
+                    AABB area = new AABB(pos).inflate(radius * 2);
+                    for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class, area)) {
+                        float distance = (float) living.distanceToSqr(pos.getCenter());
+                        if (distance < radius * radius) {
+                            float damage = 20.0f * (1.0f - (float) Math.sqrt(distance) / radius);
+                            living.hurt(damageSource, Math.max(2.0f, damage));
+                        }
+                    }
+
                     serverLevel.explode(
                             null,
                             dropX, dropY, dropZ,
@@ -253,5 +269,19 @@ public class HighOvenBlock extends BaseEntityBlock {
             }
             super.onRemove(state, level, pos, newState, isMoving);
         }
+    }
+
+    @Override
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+        if (!level.isClientSide() && entity instanceof LivingEntity living) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof HighOvenBlockEntity highOven) {
+                if (highOven.pressure > 0) {
+                    float damage = 1.0f + (highOven.pressure / HighOvenBlockEntity.MAX_PRESSURE) * 4.0f;
+                    living.hurt(level.damageSources().hotFloor(), damage);
+                }
+            }
+        }
+        super.stepOn(level, pos, state, entity);
     }
 }

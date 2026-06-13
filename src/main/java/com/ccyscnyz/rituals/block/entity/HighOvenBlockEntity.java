@@ -196,7 +196,7 @@ public class HighOvenBlockEntity extends BlockEntity {
     }
 
     private void updateLitState(Level level, BlockPos pos, BlockState state) {
-        boolean shouldLit = progress > 0;
+        boolean shouldLit = progress > 0 || pressure > 0; // 超压或工作中发光
         if (state.getValue(HighOvenBlock.LIT) != shouldLit) {
             level.setBlock(pos, state.setValue(HighOvenBlock.LIT, shouldLit), 3);
         }

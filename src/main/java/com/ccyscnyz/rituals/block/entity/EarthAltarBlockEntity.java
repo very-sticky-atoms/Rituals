@@ -145,6 +145,14 @@ public class EarthAltarBlockEntity extends BlockEntity {
         entity.maxCraftTime = recipe.getProcessingTime();
         entity.craftProgress++;
 
+        if (entity.craftProgress > 0 && level.getGameTime() % 8 == 0) { // 每4 tick播放一次
+            float progressRatio = (float) entity.craftProgress / entity.maxCraftTime;
+            float volume = 0.2f + progressRatio * 1.2f; // 音量从 0.2 到 1.5
+            float pitch = 0.5f + progressRatio * 1.5f;  // 音高从 0.5 到 2.0
+            level.playSound(null, pos, SoundEvents.WEATHER_RAIN,
+                    SoundSource.BLOCKS, volume, pitch);
+        }
+
         if (entity.craftProgress >= entity.maxCraftTime) {
             // 消耗物品
             for (int dir = 0; dir < 8; dir++) {
@@ -169,7 +177,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
                         pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                         20, 0.5, 0.5, 0.5, 0.1);
                 serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL,
-                        SoundSource.BLOCKS, 1.0F, 1.0F);
+                        SoundSource.BLOCKS, 2.0F, 1.0F);
             }
         }
 
