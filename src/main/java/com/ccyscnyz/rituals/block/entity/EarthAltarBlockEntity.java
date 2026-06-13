@@ -11,6 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -167,9 +168,12 @@ public class EarthAltarBlockEntity extends BlockEntity {
                 }
             }
 
-            // 替换中心物品
+            // 获取配方 ID 并调用修改器
+            ResourceLocation recipeId = recipeHolder.get().id();
+            ItemStack finalOutput = recipe.getAssembledOutput(recipeId, input, level, pos);
+
             entity.inventory.extractItem(0, 1, false);
-            entity.inventory.setStackInSlot(0, recipe.getResultItem().copy());
+            entity.inventory.setStackInSlot(0, finalOutput);
             entity.craftProgress = 0;
 
             if (level instanceof ServerLevel serverLevel) {

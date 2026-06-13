@@ -3,12 +3,10 @@ package com.ccyscnyz.rituals.registry.block;
 import com.ccyscnyz.rituals.annotation.AutoBlockItem;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.util.TabItemCollector;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforgespi.language.ModFileScanData;
 import net.neoforged.fml.ModList;
-import org.objectweb.asm.Type;
 
 import java.lang.annotation.ElementType;
 import java.lang.reflect.Field;
