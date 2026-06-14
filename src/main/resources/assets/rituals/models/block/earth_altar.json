@@ -4,7 +4,7 @@
 	"texture_size": [64, 64],
 	"textures": {
 		"1": "rituals:block/earth_altar",
-		"particle": "rituals:block/earth_altar"
+		"particle": "minecraft:block/polished_andesite"
 	},
 	"elements": [
 		{

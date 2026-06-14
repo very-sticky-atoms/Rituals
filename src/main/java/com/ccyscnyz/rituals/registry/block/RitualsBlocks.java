@@ -19,9 +19,9 @@ public class RitualsBlocks {
     @AutoBlockItem(tab = "rituals_tab")
     public static final DeferredBlock<Block> HIGH_OVEN = BLOCKS.register("high_oven",
             () -> new HighOvenBlock(BlockBehaviour.Properties.of()
-                    .strength(3.5F)           // 硬度
-                    .requiresCorrectToolForDrops()  // 需要正确工具才能掉落
-                    .sound(SoundType.METAL)   // 金属声音
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
             )
     );
 

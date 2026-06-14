@@ -4,7 +4,7 @@
 	"texture_size": [32, 32],
 	"textures": {
 		"1": "rituals:block/ritual_pillar",
-		"particle": "rituals:block/ritual_pillar"
+		"particle": "minecraft:block/polished_andesite"
 	},
 	"elements": [
 		{
