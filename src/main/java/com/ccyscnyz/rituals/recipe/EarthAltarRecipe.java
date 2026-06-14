@@ -55,18 +55,19 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         return true;
     }
 
-    public int runStartScript(ResourceLocation recipeId, EarthAltarRecipeContext context) {
+    public int runStartScript(ResourceLocation scriptSource, EarthAltarRecipeContext context) {
         // JSON脚本
         if (craftStartScript.isPresent() && !craftStartScript.get().isEmpty()) {
-            Rituals.LOGGER.debug("Executing script for recipe {}: {}", recipeId, craftStartScript.get());
+            Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftStartScript.get());
             try {
                 Map<String, Object> bindings = new java.util.HashMap<>();
                 bindings.put("context",context.copy());
-                int scriptResult =(int) RitualsScriptEngine.EarthAltar.executeCached(recipeId, craftStartScript.get(), bindings);
+                bindings.put("processingTime",this.processingTime);
+                int scriptResult =(int) RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
                     Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                     return scriptResult;
             } catch (ScriptException e) {
-                Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
+                Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
             }
         }
 
@@ -74,23 +75,21 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         return this.processingTime;
     }
     //获取最终产物（优先级: 脚本 > 默认输出）
-    public EarthAltarRecipeContext runFinishScript(ResourceLocation recipeId, EarthAltarRecipeContext context) {
+    public EarthAltarRecipeContext runFinishScript(ResourceLocation scriptSource, EarthAltarRecipeContext context) {
 
         // JSON脚本
         if (craftFinishScript.isPresent() && !craftFinishScript.get().isEmpty()) {
-            Rituals.LOGGER.debug("Executing script for recipe {}: {}", recipeId, craftFinishScript.get());
+            Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftFinishScript.get());
             try {
                 Map<String, Object> bindings = new java.util.HashMap<>();
                 bindings.put("context",context.copy());
-                EarthAltarRecipeContext scriptResult = (EarthAltarRecipeContext) RitualsScriptEngine.EarthAltar.executeCached(recipeId, craftFinishScript.get(), bindings);
+                EarthAltarRecipeContext scriptResult = (EarthAltarRecipeContext) RitualsScriptEngine.executeCached(scriptSource, craftFinishScript.get(), bindings);
                 if (scriptResult != null) {
                     Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                     return scriptResult;
-                } else {
-                    Rituals.LOGGER.debug("Script returned null, using default output.");
                 }
             } catch (ScriptException e) {
-                Rituals.LOGGER.error("Failed to execute script for recipe {}: {}", recipeId, e.getMessage());
+                Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
             }
         }
         List<List<ItemStack>> consumed = new ArrayList<>();
@@ -135,7 +134,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
     public Ingredient getCenter() { return center; }
     public List<Ingredient> getInputsForDirection(int dir) { return inputs.get(dir); }
     public int getProcessingTime() { return processingTime; }
-    public Optional<String> getCraftFinishScript() { return craftFinishScript; }
 
     // ---- Codec ----
     public static final MapCodec<EarthAltarRecipe> CODEC = RecordCodecBuilder.mapCodec(instance ->

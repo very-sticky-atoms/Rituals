@@ -118,7 +118,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
         if(recipeId != entity.currentRecipe){
             entity.craftProgress = 0;
             entity.currentRecipe = recipeId;
-            entity.maxCraftTime = recipe.runStartScript(recipeId,context);
+            entity.maxCraftTime = recipe.runStartScript(recipeId.withSuffix("/start"),context);
         }
         entity.craftProgress++;
 
@@ -131,7 +131,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         if (entity.craftProgress >= entity.maxCraftTime) {
-            EarthAltarRecipeContext contextNew = recipe.runFinishScript(recipeId,context);
+            EarthAltarRecipeContext contextNew = recipe.runFinishScript(recipeId.withSuffix("/finish"),context);
             for (int dir = 0; dir < 8; dir++) {
                 int index = 0;
                 for (RitualPillarBlockEntity pillar : pillars.get(dir)) {

@@ -12,59 +12,55 @@ import java.util.Map;
 
 public class RitualsScriptEngine {
 
-    public class EarthAltar {
 
-        private static final ScriptEngine engine;
-        private static final Map<ResourceLocation, CompiledScript> scriptCache = new HashMap<>();
+    private static final ScriptEngine engine;
+    private static final Map<ResourceLocation, CompiledScript> scriptCache = new HashMap<>();
 
-        static {
-            ScriptEngineManager manager = new ScriptEngineManager();
-            ScriptEngine graal = manager.getEngineByName("graal.js");
-            if (graal != null) {
-                engine = graal;
-                Rituals.LOGGER.info("EarthAltarScriptEngine: using GraalJS");
+    static {
+        ScriptEngineManager manager = new ScriptEngineManager();
+        ScriptEngine graal = manager.getEngineByName("graal.js");
+        if (graal != null) {
+            engine = graal;
+            Rituals.LOGGER.info("RitualsScriptEngine: using GraalJS");
+        } else {
+            ScriptEngine nashorn = manager.getEngineByName("nashorn");
+            if (nashorn != null) {
+                engine = nashorn;
+                Rituals.LOGGER.info("RitualsScriptEngine: using Nashorn");
             } else {
-                ScriptEngine nashorn = manager.getEngineByName("nashorn");
-                if (nashorn != null) {
-                    engine = nashorn;
-                    Rituals.LOGGER.info("EarthAltarScriptEngine: using Nashorn");
-                } else {
-                    engine = null;
-                    Rituals.LOGGER.error("EarthAltarScriptEngine: NO JavaScript engine found! Scripts will be ignored.");
-                }
+                engine = null;
+                Rituals.LOGGER.error("RitualsScriptEngine: NO JavaScript engine found! Scripts will be ignored.");
+            }
+        }
+    }
+
+
+    public static Object executeCached(ResourceLocation scriptSource, String script,
+                                                        Map<String, Object> bindings) throws ScriptException {
+        if (engine == null) {
+            Rituals.LOGGER.warn("Script engine unavailable, cannot execute script for recipe {}", scriptSource);
+            return null;
+        }
+
+        // 包装脚本以支持 return 语句
+        String wrappedScript = "(function() { " + script + " })()";
+        Rituals.LOGGER.debug("Wrapped script: {}", wrappedScript);
+
+        CompiledScript compiled = scriptCache.get(scriptSource);
+        if (compiled == null) {
+            if (engine instanceof Compilable compilable) {
+                compiled = compilable.compile(wrappedScript);
+                scriptCache.put(scriptSource, compiled);
+            } else {
+                // 引擎不支持编译，直接eval
+                Bindings scriptBindings = engine.createBindings();
+                scriptBindings.putAll(bindings);
+                return engine.eval(wrappedScript, scriptBindings);
             }
         }
 
-
-        public static Object executeCached(ResourceLocation recipeId, String script,
-                                                            Map<String, Object> bindings) throws ScriptException {
-            if (engine == null) {
-                Rituals.LOGGER.warn("Script engine unavailable, cannot execute script for recipe {}", recipeId);
-                return null;
-            }
-
-            // 包装脚本以支持 return 语句
-            String wrappedScript = "(function() { " + script + " })()";
-            Rituals.LOGGER.debug("Wrapped script: {}", wrappedScript);
-
-            CompiledScript compiled = scriptCache.get(recipeId);
-            if (compiled == null) {
-                if (engine instanceof Compilable compilable) {
-                    compiled = compilable.compile(wrappedScript);
-                    scriptCache.put(recipeId, compiled);
-                } else {
-                    // 引擎不支持编译，直接eval
-                    Bindings scriptBindings = engine.createBindings();
-                    scriptBindings.putAll(bindings);
-                    Object result = engine.eval(wrappedScript, scriptBindings);
-                    return result;
-                }
-            }
-
-            Bindings scriptBindings = engine.createBindings();
-            scriptBindings.putAll(bindings);
-            Object result = compiled.eval(scriptBindings);
-            return result;
-        }
+        Bindings scriptBindings = engine.createBindings();
+        scriptBindings.putAll(bindings);
+        return compiled.eval(scriptBindings);
     }
 }
