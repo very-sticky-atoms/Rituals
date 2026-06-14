@@ -1,10 +1,7 @@
 package com.ccyscnyz.rituals.script;
 
 import com.ccyscnyz.rituals.Rituals;
-import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.registries.BuiltInRegistries;
 
 import javax.script.*;
 import java.util.HashMap;
@@ -42,9 +39,7 @@ public class RitualsScriptEngine {
             return null;
         }
 
-        // 包装脚本以支持 return 语句
         String wrappedScript = "(function() { " + script + " })()";
-        Rituals.LOGGER.debug("Wrapped script: {}", wrappedScript);
 
         CompiledScript compiled = scriptCache.get(scriptSource);
         if (compiled == null) {

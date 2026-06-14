@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.level.Level;
-import oshi.annotation.concurrent.Immutable;
 
 import java.util.List;
 
@@ -34,4 +33,45 @@ public record EarthAltarRecipeContext(ItemStack center, List<List<ItemStack>> di
     public EarthAltarRecipeContext with(BlockPos position){
         return new EarthAltarRecipeContext(center,directionItems,level,position);
     }
+    public Container wrap(){
+        return new Container(this);
+    }
+
+    public static class Container {
+        public EarthAltarRecipeContext value;
+        public Container(EarthAltarRecipeContext context){
+            this.value = context;
+        }
+        public Container with(ItemStack center){
+            this.value = value.with(center);
+            return this;
+        }
+        public Container with(List<List<ItemStack>> directionItems){
+            this.value = value.with(directionItems);
+            return this;
+        }
+        public Container with(Level level){
+            this.value = value.with(level);
+            return this;
+        }
+        public Container with(BlockPos position){
+            this.value = value.with(position);
+            return this;
+        }
+    }
+
+    @FunctionalInterface
+    public interface Callback {
+        void call(EarthAltarRecipeContext context);
+    }
+
+    public static class CallbackContainer {
+        public Callback value;
+        public CallbackContainer(Callback callback){
+            this.value =callback;
+        }
+    }
+
+    public record StartScriptResult(int processingTime, Callback callback){}
+    public record FinishScriptResult(EarthAltarRecipeContext context, Callback callback){}
 }

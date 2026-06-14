@@ -1,6 +1,5 @@
 package com.ccyscnyz.rituals.block.entity;
 
-import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
@@ -25,7 +24,6 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class EarthAltarBlockEntity extends BlockEntity {
 
@@ -50,6 +48,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
     private int craftProgress = 0;
     private int maxCraftTime;
     private ResourceLocation currentRecipe = null;
+    private EarthAltarRecipeContext.Callback callback = ctx->{};
 
     public EarthAltarBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.EARTH_ALTAR.get(), pos, state);
@@ -118,7 +117,11 @@ public class EarthAltarBlockEntity extends BlockEntity {
         if(recipeId != entity.currentRecipe){
             entity.craftProgress = 0;
             entity.currentRecipe = recipeId;
-            entity.maxCraftTime = recipe.runStartScript(recipeId.withSuffix("/start"),context);
+            entity.maxCraftTime = recipe.getProcessingTime();
+            entity.callback = ctx -> {};
+            EarthAltarRecipeContext.StartScriptResult startScriptResult = recipe.runStartScript(recipeId.withSuffix("/start"), context, entity.maxCraftTime, entity.callback);
+            entity.maxCraftTime = startScriptResult.processingTime();
+            entity.callback = startScriptResult.callback();
         }
         entity.craftProgress++;
 
@@ -131,7 +134,9 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         if (entity.craftProgress >= entity.maxCraftTime) {
-            EarthAltarRecipeContext contextNew = recipe.runFinishScript(recipeId.withSuffix("/finish"),context);
+            EarthAltarRecipeContext.FinishScriptResult finishScriptResult = recipe.runFinishScript(recipeId.withSuffix("/finish"),context,entity.callback);
+            EarthAltarRecipeContext contextNew = finishScriptResult.context();
+            entity.callback = finishScriptResult.callback();
             for (int dir = 0; dir < 8; dir++) {
                 int index = 0;
                 for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
@@ -146,6 +151,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
             entity.inventory.extractItem(0, 1, false);
             entity.inventory.setStackInSlot(0, contextNew.center().copy());
 
+            entity.callback.call(contextNew);
             entity.craftProgress = 0;
 
             if (level instanceof ServerLevel serverLevel) {

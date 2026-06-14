@@ -7,7 +7,6 @@ import com.ccyscnyz.rituals.script.RitualsScriptEngine;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
@@ -55,39 +54,41 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         return true;
     }
 
-    public int runStartScript(ResourceLocation scriptSource, EarthAltarRecipeContext context) {
+    public EarthAltarRecipeContext.StartScriptResult runStartScript(ResourceLocation scriptSource, EarthAltarRecipeContext context, int processingTime, EarthAltarRecipeContext.Callback callback) {
         // JSON脚本
         if (craftStartScript.isPresent() && !craftStartScript.get().isEmpty()) {
             Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftStartScript.get());
             try {
                 Map<String, Object> bindings = new java.util.HashMap<>();
+                int[] ptContainer = {processingTime};
+                EarthAltarRecipeContext.CallbackContainer cbkContainer = new EarthAltarRecipeContext.CallbackContainer(callback);
                 bindings.put("context",context.copy());
-                bindings.put("processingTime",this.processingTime);
-                int scriptResult =(int) RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
-                    Rituals.LOGGER.debug("Script returned: {}", scriptResult);
-                    return scriptResult;
+                bindings.put("processingTime",ptContainer);
+                bindings.put("callback",cbkContainer);
+                RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
+                return new EarthAltarRecipeContext.StartScriptResult(ptContainer[0],cbkContainer.value);
             } catch (ScriptException e) {
                 Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
             }
         }
-
-        // 默认输出
-        return this.processingTime;
+        return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
     }
     //获取最终产物（优先级: 脚本 > 默认输出）
-    public EarthAltarRecipeContext runFinishScript(ResourceLocation scriptSource, EarthAltarRecipeContext context) {
+    public EarthAltarRecipeContext.FinishScriptResult runFinishScript(ResourceLocation scriptSource, EarthAltarRecipeContext context, EarthAltarRecipeContext.Callback callback) {
 
         // JSON脚本
         if (craftFinishScript.isPresent() && !craftFinishScript.get().isEmpty()) {
             Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftFinishScript.get());
             try {
                 Map<String, Object> bindings = new java.util.HashMap<>();
-                bindings.put("context",context.copy());
-                EarthAltarRecipeContext scriptResult = (EarthAltarRecipeContext) RitualsScriptEngine.executeCached(scriptSource, craftFinishScript.get(), bindings);
-                if (scriptResult != null) {
-                    Rituals.LOGGER.debug("Script returned: {}", scriptResult);
-                    return scriptResult;
-                }
+                EarthAltarRecipeContext.Container ctxContainer = context.copy().wrap();
+                EarthAltarRecipeContext.CallbackContainer cbkContainer =new EarthAltarRecipeContext.CallbackContainer(callback);
+                bindings.put("context",ctxContainer);
+                bindings.put("callback",cbkContainer);
+                RitualsScriptEngine.executeCached(scriptSource, craftFinishScript.get(), bindings);
+                EarthAltarRecipeContext.FinishScriptResult scriptResult = new EarthAltarRecipeContext.FinishScriptResult(ctxContainer.value.copy(),cbkContainer.value);
+                Rituals.LOGGER.debug("Script returned: {}", scriptResult);
+                return scriptResult;
             } catch (ScriptException e) {
                 Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
             }
@@ -101,7 +102,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             consumed.add(consumedDirection);
         }
         // 默认输出
-        return context.with(output.copy()).with(consumed);
+        return new EarthAltarRecipeContext.FinishScriptResult(context.with(output.copy()).with(consumed),callback);
     }
 
     @Override
