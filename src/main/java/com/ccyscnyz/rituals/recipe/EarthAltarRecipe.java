@@ -16,8 +16,9 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 
-import javax.script.ScriptException;
 import java.util.*;
 
 public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
@@ -27,7 +28,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
     private final ItemStack output;
     private final int processingTime;
     private final Optional<String> craftStartScript;
-    private final Optional<String> craftFinishScript; // 新增：JS 脚本内容
+    private final Optional<String> craftFinishScript;
 
     public EarthAltarRecipe(Ingredient center, List<List<Ingredient>> inputs, ItemStack output,
                             int processingTime, Optional<String> craftStartScript, Optional<String> craftFinishScript) {
@@ -54,55 +55,77 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         return true;
     }
 
-    public EarthAltarRecipeContext.StartScriptResult runStartScript(ResourceLocation scriptSource, EarthAltarRecipeContext context, int processingTime, EarthAltarRecipeContext.Callback callback) {
-        // JSON脚本
+    // 重载方法：支持在传入的常驻沙箱（Persistent Context）中运行启动脚本
+    public EarthAltarRecipeContext.StartScriptResult runStartScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, int processingTime, EarthAltarRecipeContext.Callback callback) {
         if (craftStartScript.isPresent() && !craftStartScript.get().isEmpty()) {
-            Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftStartScript.get());
+            Rituals.LOGGER.debug("Executing start script {}: {}", scriptSource, craftStartScript.get());
             try {
-                Map<String, Object> bindings = new java.util.HashMap<>();
                 int[] ptContainer = {processingTime};
                 EarthAltarRecipeContext.CallbackContainer cbkContainer = new EarthAltarRecipeContext.CallbackContainer(callback);
-                bindings.put("context",context.copy());
-                bindings.put("processingTime",ptContainer);
-                bindings.put("callback",cbkContainer);
-                RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
-                return new EarthAltarRecipeContext.StartScriptResult(ptContainer[0],cbkContainer.value);
-            } catch (ScriptException e) {
-                Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
+
+                if (persistentContext != null) {
+                    // 如果传入了常驻上下文，直接在其中绑定并执行
+                    Value jsBindings = persistentContext.getBindings("js");
+                    jsBindings.putMember("context", context.copy());
+                    jsBindings.putMember("processingTime", ptContainer);
+                    jsBindings.putMember("callback", cbkContainer);
+
+                    // 使用底层封装的安全评估，防止线程上下文丢失
+                    RitualsScriptEngine.evalInContext(persistentContext, scriptSource, craftStartScript.get());
+                } else {
+                    // 降级使用一次性沙箱（兼容不常驻的普通脚本）
+                    Map<String, Object> bindings = new java.util.HashMap<>();
+                    bindings.put("context", context.copy());
+                    bindings.put("processingTime", ptContainer);
+                    bindings.put("callback", cbkContainer);
+                    RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
+                }
+                return new EarthAltarRecipeContext.StartScriptResult(ptContainer[0], cbkContainer.value);
+            } catch (Exception e) {
+                Rituals.LOGGER.error("Failed to execute start script {}: {}", scriptSource, e.getMessage(), e);
             }
         }
         return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
     }
-    //获取最终产物（优先级: 脚本 > 默认输出）
-    public EarthAltarRecipeContext.FinishScriptResult runFinishScript(ResourceLocation scriptSource, EarthAltarRecipeContext context, EarthAltarRecipeContext.Callback callback) {
 
-        // JSON脚本
+    // 获取最终产物（在传入的常驻沙箱中运行结束脚本）
+    public EarthAltarRecipeContext.FinishScriptResult runFinishScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, EarthAltarRecipeContext.Callback callback) {
         if (craftFinishScript.isPresent() && !craftFinishScript.get().isEmpty()) {
-            Rituals.LOGGER.debug("Executing script {}: {}", scriptSource, craftFinishScript.get());
+            Rituals.LOGGER.debug("Executing finish script {}: {}", scriptSource, craftFinishScript.get());
             try {
-                Map<String, Object> bindings = new java.util.HashMap<>();
                 EarthAltarRecipeContext.Container ctxContainer = context.copy().wrap();
-                EarthAltarRecipeContext.CallbackContainer cbkContainer =new EarthAltarRecipeContext.CallbackContainer(callback);
-                bindings.put("context",ctxContainer);
-                bindings.put("callback",cbkContainer);
-                RitualsScriptEngine.executeCached(scriptSource, craftFinishScript.get(), bindings);
-                EarthAltarRecipeContext.FinishScriptResult scriptResult = new EarthAltarRecipeContext.FinishScriptResult(ctxContainer.value.copy(),cbkContainer.value);
+                EarthAltarRecipeContext.CallbackContainer cbkContainer = new EarthAltarRecipeContext.CallbackContainer(callback);
+
+                if (persistentContext != null) {
+                    Value jsBindings = persistentContext.getBindings("js");
+                    jsBindings.putMember("context", ctxContainer);
+                    jsBindings.putMember("callback", cbkContainer);
+
+                    RitualsScriptEngine.evalInContext(persistentContext, scriptSource, craftFinishScript.get());
+                } else {
+                    Map<String, Object> bindings = new java.util.HashMap<>();
+                    bindings.put("context", ctxContainer);
+                    bindings.put("callback", cbkContainer);
+                    RitualsScriptEngine.executeCached(scriptSource, craftFinishScript.get(), bindings);
+                }
+
+                EarthAltarRecipeContext.FinishScriptResult scriptResult = new EarthAltarRecipeContext.FinishScriptResult(ctxContainer.value.copy(), cbkContainer.value);
                 Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                 return scriptResult;
-            } catch (ScriptException e) {
-                Rituals.LOGGER.error("Failed to execute script {}: {}", scriptSource, e.getMessage());
+            } catch (Exception e) {
+                Rituals.LOGGER.error("Failed to execute finish script {}: {}", scriptSource, e.getMessage(), e);
             }
         }
+
         List<List<ItemStack>> consumed = new ArrayList<>();
-        for(int dir = 0; dir < 8; dir++){
+        for (int dir = 0; dir < 8; dir++) {
             List<ItemStack> consumedDirection = new ArrayList<>();
             for (int i = 0; i < this.inputs.get(dir).size(); i++) {
                 consumedDirection.add(ItemStack.EMPTY);
             }
             consumed.add(consumedDirection);
         }
-        // 默认输出
-        return new EarthAltarRecipeContext.FinishScriptResult(context.with(output.copy()).with(consumed),callback);
+        return new EarthAltarRecipeContext.FinishScriptResult(context.with(output.copy()).with(consumed), callback);
     }
 
     @Override
@@ -181,10 +204,8 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                         }
                         ItemStack output = ItemStack.STREAM_CODEC.decode(buf);
                         int time = buf.readInt();
-                        Optional<String> craftStartScript = buf.readBoolean() ?
-                                Optional.of(buf.readUtf()) : Optional.empty();
-                        Optional<String> craftFinishScript = buf.readBoolean() ?
-                                Optional.of(buf.readUtf()) : Optional.empty();
+                        Optional<String> craftStartScript = buf.readBoolean() ? Optional.of(buf.readUtf()) : Optional.empty();
+                        Optional<String> craftFinishScript = buf.readBoolean() ? Optional.of(buf.readUtf()) : Optional.empty();
                         return new EarthAltarRecipe(center, inputs, output, time, craftStartScript, craftFinishScript);
                     }
             );

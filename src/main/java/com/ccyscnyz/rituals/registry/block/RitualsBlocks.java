@@ -42,5 +42,7 @@ public class RitualsBlocks {
                     .sound(SoundType.STONE)
             )
     );
+
+
 }
 

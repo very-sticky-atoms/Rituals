@@ -2,60 +2,158 @@ package com.ccyscnyz.rituals.script;
 
 import com.ccyscnyz.rituals.Rituals;
 import net.minecraft.resources.ResourceLocation;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 
-import javax.script.*;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RitualsScriptEngine {
 
+    // 1. 全局唯一的重量级引擎，负责缓存编译后的 JS 代码和底层运行环境
+    private static final Engine sharedEngine;
 
-    private static final ScriptEngine engine;
-    private static final Map<ResourceLocation, CompiledScript> scriptCache = new HashMap<>();
+    // 2. 缓存编译后的 Source 对象（使用线程安全的 ConcurrentHashMap）
+    private static final Map<ResourceLocation, Source> scriptCache = new ConcurrentHashMap<>();
 
     static {
-        ScriptEngineManager manager = new ScriptEngineManager();
-        ScriptEngine graal = manager.getEngineByName("graal.js");
-        if (graal != null) {
-            engine = graal;
-            Rituals.LOGGER.info("RitualsScriptEngine: using GraalJS");
-        } else {
-            ScriptEngine nashorn = manager.getEngineByName("nashorn");
-            if (nashorn != null) {
-                engine = nashorn;
-                Rituals.LOGGER.info("RitualsScriptEngine: using Nashorn");
+        // ---- 重定向类加载器，防止 ModLauncher 拦截导致找不到 JS 语言(过于安全所导致的) ----
+        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+        Engine eng = null;
+        try {
+            Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
+
+            // 检查当前 JVM 是否真正启用了 JVMCI 编译器
+            String jvmciCompiler = System.getProperty("jvmci.Compiler");
+            boolean isJVMCIActive = jvmciCompiler != null && !jvmciCompiler.isEmpty();
+
+            if (isJVMCIActive) {
+                Rituals.LOGGER.info("RitualsScriptEngine: Detects JVMCI is ACTIVE. Script performance will be optimized by Graal JIT!");
             } else {
-                engine = null;
-                Rituals.LOGGER.error("RitualsScriptEngine: NO JavaScript engine found! Scripts will be ignored.");
+                // 打印日志提醒玩家
+                Rituals.LOGGER.warn("========================================================================");
+                Rituals.LOGGER.warn("RitualsScriptEngine: JVMCI is NOT enabled or not running on GraalVM JDK.");
+                Rituals.LOGGER.warn("Scripts will run in INTERPRETER mode (slower performance).");
+                Rituals.LOGGER.warn("To unlock full performance, please add these JVM flags to your launcher:");
+                Rituals.LOGGER.warn("  -XX:+UnlockExperimentalVMOptions -XX:+UseJVMCICompiler");
+                Rituals.LOGGER.warn("========================================================================");
             }
+
+            // 初始化全局引擎
+            eng = Engine.newBuilder()
+                    .allowExperimentalOptions(true)// 当某个配方的 Source 被覆盖或不再使用时，允许底层垃圾回收
+                    .build();
+            Rituals.LOGGER.info("RitualsScriptEngine: GraalVM Engine initialized.");
+        } catch (Exception e) {
+            Rituals.LOGGER.error("RitualsScriptEngine: Failed to initialize GraalVM Engine!", e);
+        } finally {
+            Thread.currentThread().setContextClassLoader(oldCl);
         }
+        sharedEngine = eng;
     }
 
-
+    // 一次性安全执行脚本
     public static Object executeCached(ResourceLocation scriptSource, String script,
-                                                        Map<String, Object> bindings) throws ScriptException {
-        if (engine == null) {
-            Rituals.LOGGER.warn("Script engine unavailable, cannot execute script for recipe {}", scriptSource);
+                                       Map<String, Object> bindings) throws Exception {
+        if (sharedEngine == null) {
+            Rituals.LOGGER.error("RitualsScriptEngine: Script engine unavailable, cannot execute script for recipe {}", scriptSource);
             return null;
         }
 
+        // 包装成自执行函数，防止变量污染
         String wrappedScript = "(function() { " + script + " })()";
 
-        CompiledScript compiled = scriptCache.get(scriptSource);
-        if (compiled == null) {
-            if (engine instanceof Compilable compilable) {
-                compiled = compilable.compile(wrappedScript);
-                scriptCache.put(scriptSource, compiled);
-            } else {
-                // 引擎不支持编译，直接eval
-                Bindings scriptBindings = engine.createBindings();
-                scriptBindings.putAll(bindings);
-                return engine.eval(wrappedScript, scriptBindings);
+        // 从缓存获取或编译 Source
+        Source source = scriptCache.computeIfAbsent(scriptSource, id -> {
+            try {
+                return Source.newBuilder("js", wrappedScript, id.toString()).build();
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Failed to build GraalJS Source for " + id, e);
             }
-        }
+        });
 
-        Bindings scriptBindings = engine.createBindings();
-        scriptBindings.putAll(bindings);
-        return compiled.eval(scriptBindings);
+        // 为每次执行的轻量沙箱 Context 同样重定向类加载器
+        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
+
+            try (Context context = Context.newBuilder("js")
+                    .engine(sharedEngine)
+                    // 允许完全的宿主访问权限
+                    .allowHostAccess(HostAccess.ALL)
+                    .allowHostClassLookup(className -> true)
+                    .hostClassLoader(RitualsScriptEngine.class.getClassLoader())
+                    // 开启目标类型自动映射与消歧义
+                    .allowHostAccess(HostAccess.newBuilder(HostAccess.ALL)
+                            // 允许 JavaScript 的数值映射到 Java 的各类基本数字/布尔类型，极大提升重载方法匹配成功率
+                            .targetTypeMapping(
+                                    Double.class,
+                                    Object.class,
+                                    (v) -> true,
+                                    (v) -> v
+                            )
+                            .build())
+                    .build()) {
+
+                // 获取当前独立沙盒的 bindings
+                Value jsBindings = context.getBindings("js");
+
+                // 注入本次配方所需的变量
+                bindings.forEach(jsBindings::putMember);
+
+                // 执行脚本
+                Value result = context.eval(source);
+
+                // 返回结果转换
+                if (result == null || result.isNull()) {
+                    return null;
+                }
+                return result.isHostObject() ? result.asHostObject() : result;
+            }
+        } finally {
+            Thread.currentThread().setContextClassLoader(oldCl);
+        }
+    }
+
+    // 允许创建一个常驻沙箱
+    public static Context createPersistentContext() {
+        if (sharedEngine == null) return null;
+
+        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
+
+            return Context.newBuilder("js")
+                    .engine(sharedEngine)
+                    .allowHostAccess(HostAccess.ALL)
+                    .allowHostClassLookup(className -> true)
+                    .hostClassLoader(RitualsScriptEngine.class.getClassLoader())
+                    .build();
+        } finally {
+            Thread.currentThread().setContextClassLoader(oldCl);
+        }
+    }
+
+    // 将预编译好的脚本直接放入指定沙箱执行，供常驻沙箱使用
+    public static Value evalInContext(Context context, ResourceLocation scriptSource, String script) {
+        String wrappedScript = "(function() { " + script + " })()";
+        Source source = scriptCache.computeIfAbsent(scriptSource, id -> {
+            try {
+                return Source.newBuilder("js", wrappedScript, id.toString()).build();
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Failed to build GraalJS Source for " + id, e);
+            }
+        });
+
+        ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
+            return context.eval(source);
+        } finally {
+            Thread.currentThread().setContextClassLoader(oldCl);
+        }
     }
 }

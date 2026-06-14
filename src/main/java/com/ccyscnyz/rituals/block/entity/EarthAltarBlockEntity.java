@@ -4,6 +4,7 @@ import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
+import com.ccyscnyz.rituals.script.RitualsContextHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
@@ -37,9 +38,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
         }
 
         @Override
-        public boolean isItemValid(int slot, ItemStack stack) {
-            return true;
-        }
+        public boolean isItemValid(int slot, ItemStack stack) { return true; }
 
         @Override
         public int getSlotLimit(int slot) { return 1; }
@@ -48,33 +47,33 @@ public class EarthAltarBlockEntity extends BlockEntity {
     private int craftProgress = 0;
     private int maxCraftTime;
     private ResourceLocation currentRecipe = null;
-    private EarthAltarRecipeContext.Callback callback = ctx->{};
+    private EarthAltarRecipeContext.Callback callback = ctx -> {};
+
+    // ---- 自动销毁上下文进行保护 ----
+    private RitualsContextHolder ritualContext = null;
 
     public EarthAltarBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.EARTH_ALTAR.get(), pos, state);
     }
 
-    // 八个方向偏移（依次北、东北、东、东南、南、西南、西、西北）
     private static final Vec3i[] DIRECTION_OFFSETS = {
-            new Vec3i(0, 0, -1),
-            new Vec3i(1, 0, -1),
-            new Vec3i(1, 0, 0),
-            new Vec3i(1, 0, 1),
-            new Vec3i(0, 0, 1),
-            new Vec3i(-1, 0, 1),
-            new Vec3i(-1, 0, 0),
-            new Vec3i(-1, 0, -1),
+            new Vec3i(0, 0, -1),   // 北
+            new Vec3i(1, 0, -1),   // 东北
+            new Vec3i(1, 0, 0),    // 东
+            new Vec3i(1, 0, 1),    // 东南
+            new Vec3i(0, 0, 1),    // 南
+            new Vec3i(-1, 0, 1),   // 西南
+            new Vec3i(-1, 0, 0),   // 西
+            new Vec3i(-1, 0, -1),  // 西北
     };
 
-
-    //检测仪式柱
     private Map<Integer, List<RitualPillarBlockEntity>> detectPillars() {
         Map<Integer, List<RitualPillarBlockEntity>> entries = new HashMap<>();
         if (level == null) return new HashMap<>();
         int radius = 5;
         for (int dir = 0; dir < 8; dir++) {
             List<RitualPillarBlockEntity> detectResult = new ArrayList<>();
-            for (int r = 1; r<=radius; r++) {
+            for (int r = 1; r <= radius; r++) {
                 BlockEntity block = level.getBlockEntity(this.worldPosition.offset(DIRECTION_OFFSETS[dir].multiply(r)));
                 if (block instanceof RitualPillarBlockEntity pillar) {
                     detectResult.add(pillar);
@@ -82,14 +81,24 @@ public class EarthAltarBlockEntity extends BlockEntity {
             }
             entries.put(dir, detectResult);
         }
-
         return entries;
+    }
+
+    // 辅助安全重置合成和清理沙箱的方法
+    private void resetCraft() {
+        this.craftProgress = 0;
+        this.currentRecipe = null;
+        this.callback = ctx -> {};
+        if (this.ritualContext != null) {
+            this.ritualContext.close();
+            this.ritualContext = null;
+        }
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EarthAltarBlockEntity entity) {
         ItemStack centerStack = entity.inventory.getStackInSlot(0);
         if (centerStack.isEmpty()) {
-            entity.craftProgress = 0;
+            entity.resetCraft();
             return;
         }
 
@@ -108,42 +117,53 @@ public class EarthAltarBlockEntity extends BlockEntity {
                 RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(), context, level, entity.currentRecipe);
 
         if (recipeHolder.isEmpty()) {
-            entity.craftProgress = 0;
+            entity.resetCraft();
             return;
         }
 
         EarthAltarRecipe recipe = recipeHolder.get().value();
         ResourceLocation recipeId = recipeHolder.get().id();
-        if(recipeId != entity.currentRecipe){
-            entity.craftProgress = 0;
+
+        if (!recipeId.equals(entity.currentRecipe)) {
+            entity.resetCraft(); // 清理旧配方对应的一切环境
             entity.currentRecipe = recipeId;
             entity.maxCraftTime = recipe.getProcessingTime();
-            entity.callback = ctx -> {};
-            EarthAltarRecipeContext.StartScriptResult startScriptResult = recipe.runStartScript(recipeId.withSuffix("/start"), context, entity.maxCraftTime, entity.callback);
+
+            // 为当前新匹配上的仪式建立托管沙箱
+            entity.ritualContext = RitualsContextHolder.create();
+
+            // 传入长生命周期沙箱（内部使用 .get() 传参）并执行 start 脚本
+            EarthAltarRecipeContext.StartScriptResult startScriptResult = recipe.runStartScript(
+                    entity.ritualContext.get(), recipeId.withSuffix("/start"), context, entity.maxCraftTime, entity.callback);
+
             entity.maxCraftTime = startScriptResult.processingTime();
             entity.callback = startScriptResult.callback();
         }
+
         entity.craftProgress++;
 
-        if (entity.craftProgress > 0 && level.getGameTime() % 8 == 0) { // 每4 tick播放一次
+        if (entity.craftProgress > 0 && level.getGameTime() % 8 == 0) {
             float progressRatio = (float) entity.craftProgress / entity.maxCraftTime;
-            float volume = 0.2f + progressRatio * 1.2f; // 音量从 0.2 到 1.5
-            float pitch = 0.5f + progressRatio * 1.5f;  // 音高从 0.5 到 2.0
-            level.playSound(null, pos, SoundEvents.WEATHER_RAIN,
-                    SoundSource.BLOCKS, volume, pitch);
+            float volume = 0.2f + progressRatio * 1.2f;
+            float pitch = 0.5f + progressRatio * 1.5f;
+            level.playSound(null, pos, SoundEvents.WEATHER_RAIN, SoundSource.BLOCKS, volume, pitch);
         }
 
         if (entity.craftProgress >= entity.maxCraftTime) {
-            EarthAltarRecipeContext.FinishScriptResult finishScriptResult = recipe.runFinishScript(recipeId.withSuffix("/finish"),context,entity.callback);
+            // 结束时同样在常驻沙箱中执行 finish 脚本
+            EarthAltarRecipeContext.FinishScriptResult finishScriptResult = recipe.runFinishScript(
+                    entity.ritualContext.get(), recipeId.withSuffix("/finish"), context, entity.callback);
+
             EarthAltarRecipeContext contextNew = finishScriptResult.context();
             entity.callback = finishScriptResult.callback();
+
             for (int dir = 0; dir < 8; dir++) {
                 int index = 0;
                 for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
                     pillar.inventory.extractItem(0, 1, false);
-                    pillar.inventory.setStackInSlot(0,contextNew.directionItems().get(dir).get(index).copy());
+                    pillar.inventory.setStackInSlot(0, contextNew.directionItems().get(dir).get(index).copy());
                     pillar.setChanged();
-                    level.sendBlockUpdated(pillar.getBlockPos(),pillar.getBlockState(),pillar.getBlockState(),2);
+                    level.sendBlockUpdated(pillar.getBlockPos(), pillar.getBlockState(), pillar.getBlockState(), 2);
                     index++;
                 }
             }
@@ -151,47 +171,54 @@ public class EarthAltarBlockEntity extends BlockEntity {
             entity.inventory.extractItem(0, 1, false);
             entity.inventory.setStackInSlot(0, contextNew.center().copy());
 
-            entity.callback.call(contextNew);
-            entity.craftProgress = 0;
+            if (entity.callback != null) {
+                try {
+                    entity.callback.call(contextNew);
+                } catch (Exception e) {
+                    com.ccyscnyz.rituals.Rituals.LOGGER.error("Error invoking ritual complete callback", e);
+                }
+            }
+
+            // 仪式完成
+            entity.resetCraft();
 
             if (level instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(ParticleTypes.END_ROD,
-                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                        20, 0.5, 0.5, 0.5, 0.1);
-                serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL,
-                        SoundSource.BLOCKS, 2.0F, 1.0F);
+                serverLevel.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 20, 0.5, 0.5, 0.5, 0.1);
+                serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 2.0F, 1.0F);
             }
+            return;
         }
 
         entity.setChanged();
         level.sendBlockUpdated(pos, state, state, 2);
 
-        // 合成进度粒子效果
         if (entity.craftProgress > 0 && level instanceof ServerLevel serverLevel) {
-            int particleCount = entity.craftProgress / 5 + 1; // 进度越多粒子越多
+            int particleCount = entity.craftProgress / 5 + 1;
             for (int i = 0; i < particleCount; i++) {
-                // 在祭坛周围随机位置生成粒子
                 double angle = level.random.nextDouble() * Math.PI * 2;
                 double distance = 1.5 + level.random.nextDouble() * 2.5;
                 double x = pos.getX() + 0.5 + Math.cos(angle) * distance;
                 double z = pos.getZ() + 0.5 + Math.sin(angle) * distance;
                 double y = pos.getY() + 0.2 + level.random.nextDouble() * 0.6;
 
-                float progress = (float) entity.craftProgress/entity.maxCraftTime;
-                // 粒子向祭坛中心移动
+                float progress = (float) entity.craftProgress / entity.maxCraftTime;
                 double dx = (pos.getX() + 0.5 - x) * 12 * progress;
                 double dy = (pos.getY() + 0.8 - y) * 7.5 * progress;
                 double dz = (pos.getZ() + 0.5 - z) * 12 * progress;
 
-                serverLevel.sendParticles(
-                        ParticleTypes.DUST_PLUME, // 土黄色粉尘粒子，大地主题
-                        x, y, z,
-                        0,    // 数量
-                        dx, dy, dz,  // 向中心移动的速度
-                        0.05  // 粒子速度偏差
-                );
+                serverLevel.sendParticles(ParticleTypes.DUST_PLUME, x, y, z, 0, dx, dy, dz, 0.05);
             }
         }
+    }
+
+    // ---- 清除常驻上下文 ----
+    @Override
+    public void setRemoved() {
+        if (this.ritualContext != null) {
+            this.ritualContext.close(); // 优雅关机
+            this.ritualContext = null;
+        }
+        super.setRemoved();
     }
 
     @Override
@@ -211,15 +238,11 @@ public class EarthAltarBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
-    }
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) { return saveWithoutMetadata(registries); }
 
     @Nullable
     @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public Packet<ClientGamePacketListener> getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     public int getCraftProgress() { return craftProgress; }
     public int getMaxCraftTime() { return maxCraftTime; }

@@ -13,5 +13,5 @@
   ],
   "output": { "id": "minecraft:iron_ingot", "count": 1 },
   "processingTime": 400,
-  "craftStartScript": "callback.value=function(ctx){ctx.level.destroyBlock(context.position,true);};processingTime[0]=100;"
+  "craftStartScript": "callback.value=function(ctx){ctx.level().destroyBlock(context.position(),true);};processingTime[0]=100;"
 }
