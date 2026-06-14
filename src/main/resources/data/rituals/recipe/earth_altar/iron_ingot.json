@@ -12,6 +12,5 @@
     []
   ],
   "output": { "id": "minecraft:iron_ingot", "count": 1 },
-  "processingTime": 400,
-  "script": "if (level.isRaining()) { rituals.setOutput('minecraft:water_bucket'); } else { rituals.setOutput('minecraft:lava_bucket'); }"
+  "processingTime": 400
 }

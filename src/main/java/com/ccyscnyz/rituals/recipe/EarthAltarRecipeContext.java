@@ -11,12 +11,12 @@ import java.util.List;
 public record EarthAltarRecipeContext(ItemStack center, List<List<ItemStack>> directionItems, Level level, BlockPos position) implements RecipeInput{
     @Override
     public ItemStack getItem(int index) {
-        return null;
+        return center;
     }
 
     @Override
     public int size() {
-        return 0;
+        return 1;
     }
 
     public EarthAltarRecipeContext copy(){

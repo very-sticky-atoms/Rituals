@@ -1,5 +1,6 @@
 package com.ccyscnyz.rituals.block.entity;
 
+import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
@@ -48,7 +49,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
 
     private int craftProgress = 0;
     private int maxCraftTime;
-    private Optional<EarthAltarRecipe> currentRecipe = Optional.empty();
+    private ResourceLocation currentRecipe = null;
 
     public EarthAltarBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.EARTH_ALTAR.get(), pos, state);
@@ -75,7 +76,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
         for (int dir = 0; dir < 8; dir++) {
             List<RitualPillarBlockEntity> detectResult = new ArrayList<>();
             for (int r = 1; r<=radius; r++) {
-                BlockEntity block = level.getBlockEntity(this.worldPosition.offset(DIRECTION_OFFSETS[dir]));
+                BlockEntity block = level.getBlockEntity(this.worldPosition.offset(DIRECTION_OFFSETS[dir].multiply(r)));
                 if (block instanceof RitualPillarBlockEntity pillar) {
                     detectResult.add(pillar);
                 }
@@ -105,7 +106,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
 
         EarthAltarRecipeContext context = new EarthAltarRecipeContext(centerStack, directionItems, level, entity.worldPosition);
         var recipeHolder = level.getRecipeManager().getRecipeFor(
-                RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(), context, level);
+                RitualsRecipeTypes.EARTH_ALTAR_RECIPE_TYPE.get(), context, level, entity.currentRecipe);
 
         if (recipeHolder.isEmpty()) {
             entity.craftProgress = 0;
@@ -114,9 +115,9 @@ public class EarthAltarBlockEntity extends BlockEntity {
 
         EarthAltarRecipe recipe = recipeHolder.get().value();
         ResourceLocation recipeId = recipeHolder.get().id();
-        if(entity.currentRecipe.isEmpty() || !entity.currentRecipe.get().equals(recipe)){
+        if(recipeId != entity.currentRecipe){
             entity.craftProgress = 0;
-            entity.currentRecipe = Optional.of(recipe);
+            entity.currentRecipe = recipeId;
             entity.maxCraftTime = recipe.runStartScript(recipeId,context);
         }
         entity.craftProgress++;
@@ -132,10 +133,13 @@ public class EarthAltarBlockEntity extends BlockEntity {
         if (entity.craftProgress >= entity.maxCraftTime) {
             EarthAltarRecipeContext contextNew = recipe.runFinishScript(recipeId,context);
             for (int dir = 0; dir < 8; dir++) {
-                for (int i = 1; i < pillars.get(dir).size(); i++) {
-                    RitualPillarBlockEntity pillar = pillars.get(dir).get(i);
+                int index = 0;
+                for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
                     pillar.inventory.extractItem(0, 1, false);
-                    pillar.inventory.setStackInSlot(0,contextNew.directionItems().get(dir).get(i));
+                    pillar.inventory.setStackInSlot(0,contextNew.directionItems().get(dir).get(index).copy());
+                    pillar.setChanged();
+                    level.sendBlockUpdated(pillar.getBlockPos(),pillar.getBlockState(),pillar.getBlockState(),2);
+                    index++;
                 }
             }
 

@@ -47,13 +47,9 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         for (int dir = 0; dir < 8; dir++) {
             List<Ingredient> required = inputs.get(dir);
             List<ItemStack> actual = input.directionItems().get(dir);
-            List<ItemStack> nonEmptyActual = new ArrayList<>();
-            for (ItemStack stack : actual) {
-                if (!stack.isEmpty()) nonEmptyActual.add(stack);
-            }
-            if (required.size() != nonEmptyActual.size()) return false;
+            if (required.size() != actual.size()) return false;
             for (int i = 0; i < required.size(); i++) {
-                if (!required.get(i).test(nonEmptyActual.get(i))) return false;
+                if (!required.get(i).test(actual.get(i))) return false;
             }
         }
         return true;
@@ -98,9 +94,11 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             }
         }
         List<List<ItemStack>> consumed = new ArrayList<>();
-        for(int dir =0; dir < 8; dir++){
-            List<ItemStack> consumedDirection = new ArrayList<>(this.inputs.get(dir).size());
-            Collections.fill(consumedDirection,ItemStack.EMPTY);
+        for(int dir = 0; dir < 8; dir++){
+            List<ItemStack> consumedDirection = new ArrayList<>();
+            for (int i = 0; i < this.inputs.get(dir).size(); i++) {
+                consumedDirection.add(ItemStack.EMPTY);
+            }
             consumed.add(consumedDirection);
         }
         // 默认输出
