@@ -190,4 +190,33 @@ public class RitualsScriptEngine {
             Thread.currentThread().setContextClassLoader(oldCl);
         }
     }
+
+
+
+    public static void warmup() {
+        // 起一个低优先级的守护线程去跑，绝对不卡主线程
+        Thread warmupThread = new Thread(() -> {
+            Rituals.LOGGER.info("RitualsScriptEngine: Starting asynchronous warmup...");
+            long startTime = System.currentTimeMillis();
+            try {
+                // 盲跑一次完整的创建、Bindings 注入和 eval 流程
+                Context dummyContext = createPersistentContext();
+                if (dummyContext != null) {
+                    // 随便跑一行代码， 让GraalVM 把 JS 运行时和原型链全部初始化完
+                    dummyContext.eval("js", "var a = 1 + 1; Item.of('minecraft:air');");
+                    dummyContext.close(true);
+
+                    long duration = System.currentTimeMillis() - startTime;
+                    Rituals.LOGGER.info("RitualsScriptEngine: Warmup completed in {}ms. Ready for lag-free crafting!", duration);
+                }
+            } catch (Exception e) {
+                Rituals.LOGGER.warn("RitualsScriptEngine: Warmup encountered an issue", e);
+            }
+        });
+
+        warmupThread.setName("Rituals-Script-Warmup");
+        warmupThread.setDaemon(true);
+        warmupThread.setPriority(Thread.MIN_PRIORITY);
+        warmupThread.start();
+    }
 }

@@ -8,6 +8,7 @@ import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.util.SidedItemHandler;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -18,28 +19,26 @@ public class RitualsCapabilities {
 
     @SubscribeEvent
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // 高炉：仅当炉门打开时允许漏斗交互；移除左面（火种）交互
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 RitualsBlockEntities.HIGH_OVEN.get(),
                 (blockEntity, side) -> {
                     if (blockEntity instanceof HighOvenBlockEntity entity) {
-                        if (side == null) return null;
-                        Direction facing = entity.getBlockState().getValue(HighOvenBlock.FACING);
-                        Direction leftSide = facing.getClockWise();
-
-                        // 正面：输入槽
-                        if (side == facing) {
+                        BlockState state = entity.getBlockState();
+                        if (!state.getValue(HighOvenBlock.DOOR_OPEN)) {
+                            return null; // 门关着，禁止所有漏斗交互
+                        }
+                        Direction facing = state.getValue(HighOvenBlock.FACING);
+                        // 顶部：输入槽
+                        if (side == Direction.UP) {
                             return new SidedItemHandler(entity.inventory, new int[]{0, 1, 2}, new int[]{}, null);
                         }
-                        // 左面：火种槽，限制1个
-                        else if (side == leftSide) {
-                            return new SidedItemHandler(entity.inventory, new int[]{3}, new int[]{}, 1);
-                        }
-                        // 底部和背面：输出槽
-                        else if (side == Direction.DOWN || side == facing.getOpposite()) {
+                        // 底部或背面：输出槽
+                        if (side == Direction.DOWN || side == facing.getOpposite()) {
                             return new SidedItemHandler(entity.inventory, new int[]{}, new int[]{4}, null);
                         }
-                        // 顶部、右侧等其他面：无漏斗交互
+                        // 左面（原火种面）和其他面不提供能力
                         return null;
                     }
                     return null;

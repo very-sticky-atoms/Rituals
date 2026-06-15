@@ -1,34 +1,20 @@
 {
   "variants": {
-    "facing=north,lit=false": {
-      "model": "rituals:block/high_oven"
-    },
-    "facing=east,lit=false": {
-      "model": "rituals:block/high_oven",
-      "y": 90
-    },
-    "facing=south,lit=false": {
-      "model": "rituals:block/high_oven",
-      "y": 180
-    },
-    "facing=west,lit=false": {
-      "model": "rituals:block/high_oven",
-      "y": 270
-    },
-    "facing=north,lit=true": {
-      "model": "rituals:block/high_oven_on"
-    },
-    "facing=east,lit=true": {
-      "model": "rituals:block/high_oven_on",
-      "y": 90
-    },
-    "facing=south,lit=true": {
-      "model": "rituals:block/high_oven_on",
-      "y": 180
-    },
-    "facing=west,lit=true": {
-      "model": "rituals:block/high_oven_on",
-      "y": 270
-    }
+    "facing=north,lit=false,door_open=false": { "model": "rituals:block/high_oven" },
+    "facing=north,lit=false,door_open=true":  { "model": "rituals:block/high_oven_dooropen" },
+    "facing=east,lit=false,door_open=false":  { "model": "rituals:block/high_oven", "y": 90 },
+    "facing=east,lit=false,door_open=true":   { "model": "rituals:block/high_oven_dooropen", "y": 90 },
+    "facing=south,lit=false,door_open=false": { "model": "rituals:block/high_oven", "y": 180 },
+    "facing=south,lit=false,door_open=true":  { "model": "rituals:block/high_oven_dooropen", "y": 180 },
+    "facing=west,lit=false,door_open=false":  { "model": "rituals:block/high_oven", "y": 270 },
+    "facing=west,lit=false,door_open=true":   { "model": "rituals:block/high_oven_dooropen", "y": 270 },
+    "facing=north,lit=true,door_open=false":  { "model": "rituals:block/high_oven_on" },
+    "facing=north,lit=true,door_open=true":   { "model": "rituals:block/high_oven_dooropen" },
+    "facing=east,lit=true,door_open=false":   { "model": "rituals:block/high_oven_on", "y": 90 },
+    "facing=east,lit=true,door_open=true":    { "model": "rituals:block/high_oven_dooropen", "y": 90 },
+    "facing=south,lit=true,door_open=false":  { "model": "rituals:block/high_oven_on", "y": 180 },
+    "facing=south,lit=true,door_open=true":   { "model": "rituals:block/high_oven_dooropen", "y": 180 },
+    "facing=west,lit=true,door_open=false":   { "model": "rituals:block/high_oven_on", "y": 270 },
+    "facing=west,lit=true,door_open=true":    { "model": "rituals:block/high_oven_dooropen", "y": 270 }
   }
 }
