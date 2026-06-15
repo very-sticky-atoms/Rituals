@@ -31,9 +31,8 @@ public class RitualsScriptEngine {
             boolean isJVMCIActive = jvmciCompiler != null && !jvmciCompiler.isEmpty();
 
             if (isJVMCIActive) {
-                Rituals.LOGGER.info("RitualsScriptEngine: Detects JVMCI is ACTIVE. Script performance will be optimized by Graal JIT!");
+                Rituals.LOGGER.info("RitualsScriptEngine: JVMCI is ACTIVE. Script performance will be optimized by Graal JIT");
             } else {
-                // 打印日志提醒玩家
                 Rituals.LOGGER.warn("========================================================================");
                 Rituals.LOGGER.warn("RitualsScriptEngine: JVMCI is NOT enabled or not running on GraalVM JDK.");
                 Rituals.LOGGER.warn("Scripts will run in INTERPRETER mode (slower performance).");
@@ -126,12 +125,47 @@ public class RitualsScriptEngine {
         try {
             Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
 
-            return Context.newBuilder("js")
+            Context context = Context.newBuilder("js")
                     .engine(sharedEngine)
                     .allowHostAccess(HostAccess.ALL)
                     .allowHostClassLookup(className -> true)
                     .hostClassLoader(RitualsScriptEngine.class.getClassLoader())
                     .build();
+
+            Value jsBindings = context.getBindings("js");
+            jsBindings.putMember("ItemStack", net.minecraft.world.item.ItemStack.class);
+            jsBindings.putMember("Items", net.minecraft.world.item.Items.class);
+            jsBindings.putMember("Component", net.minecraft.network.chat.Component.class);
+            jsBindings.putMember("CompoundTag", net.minecraft.nbt.CompoundTag.class);
+            jsBindings.putMember("DataComponents", net.minecraft.core.component.DataComponents.class);
+            jsBindings.putMember("CustomData", net.minecraft.world.item.component.CustomData.class);
+
+            // 注入 JS 原型链
+            context.eval("js",
+                    // 给 ItemStack 原型链扩充三个方法
+                    "if (typeof ItemStack !== 'undefined' && ItemStack.prototype) {" +
+                            "    ItemStack.prototype.setComponent = function(id, val) {" +
+                            "        com.ccyscnyz.rituals.script.ScriptItemUtils.setComponent(this, id, val);" +
+                            "        return this;" + // 支持链式流式编程
+                            "    };" +
+                            "    ItemStack.prototype.getComponent = function(id) {" +
+                            "        return com.ccyscnyz.rituals.script.ScriptItemUtils.getComponent(this, id);" +
+                            "    };" +
+                            "    ItemStack.prototype.mergeCustomData = function(tag) {" +
+                            "        com.ccyscnyz.rituals.script.ScriptItemUtils.mergeCustomData(this, tag);" +
+                            "        return this;" +
+                            "    };" +
+                            "}" +
+
+                            // 创造全局 Item.of() 快速物品生成器
+                            "globalThis.Item = {" +
+                            "    of: function(itemId, count) {" +
+                            "        return com.ccyscnyz.rituals.script.ScriptItemUtils.getItem(itemId, count || 1);" +
+                            "    }" +
+                            "};"
+            );
+
+            return context;
         } finally {
             Thread.currentThread().setContextClassLoader(oldCl);
         }
