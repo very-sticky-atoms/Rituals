@@ -7,23 +7,16 @@ import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.Density;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
@@ -32,7 +25,7 @@ import java.util.List;
 
 public class HighOvenBlockEntity extends BlockEntity {
 
-    // 0-2: 输入槽, 3: 火种槽, 4: 输出槽
+    // 槽位：0,1,2 输入；3 废弃（火种已移除）；4 输出
     public final ItemStackHandler inventory = new ItemStackHandler(5) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -44,12 +37,11 @@ public class HighOvenBlockEntity extends BlockEntity {
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return slot != 4;
+            return slot != 4; // 输出槽禁止外部放入
         }
 
         @Override
         public int getSlotLimit(int slot) {
-            if (slot == 3) return 1;
             return super.getSlotLimit(slot);
         }
     };
@@ -57,102 +49,53 @@ public class HighOvenBlockEntity extends BlockEntity {
     private int progress = 0;
     private int maxProgress = 100;
 
-    // 溢出压力系统
-    public final List<ItemStack> overflowItems = new ArrayList<>();
-    public float pressure = 0f;
-    public static final float MAX_PRESSURE = 1000f;
-
-    // 点燃状态仅通过 currentFuel 表示：非空即已点火
+    // 点燃状态：当前火种类型（空表示未点燃）
     private ItemStack currentFuel = ItemStack.EMPTY;
 
     public HighOvenBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.HIGH_OVEN.get(), pos, state);
     }
 
-    // ---------- 服务端每 tick ----------
+    // ---- 服务端每 tick ----
     public static void serverTick(Level level, BlockPos pos, BlockState state, HighOvenBlockEntity entity) {
-        ItemStack fuelSlot = entity.inventory.getStackInSlot(3);
+        boolean doorOpen = state.getValue(HighOvenBlock.DOOR_OPEN);
 
-        entity.tickPressure(level);
-        entity.setChanged();
-
-        entity.updateLitState(level, pos, state);
-
-        float pressure = entity.pressure;
-        if (entity.pressure > 0 && level.random.nextFloat() < pressure / MAX_PRESSURE / 4 + 0.1) {
-            level.playSound(null, pos, SoundEvents.FIRE_AMBIENT,
-                    SoundSource.BLOCKS, 0.7f, 2.0f);
+        if (!level.isClientSide() && level.getGameTime() % 10 == 0) {
+            level.sendBlockUpdated(pos, state, state, 2);
         }
 
-        BlockState updatedState = level.getBlockState(pos);
-        if (level.getGameTime() % 10 == 0) {
-            level.sendBlockUpdated(pos, updatedState, updatedState, 2);
-        }
-
-        // 1. 如果已点火，检查 currentFuel 是否仍然有效
-        if (!entity.currentFuel.isEmpty()) {
-            HighOvenRecipeInput testInput = new HighOvenRecipeInput(
-                    entity.inventory.getStackInSlot(0),
-                    entity.inventory.getStackInSlot(1),
-                    entity.inventory.getStackInSlot(2),
-                    entity.currentFuel
-            );
-            var testRecipe = level.getRecipeManager().getRecipeFor(
-                    RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get(), testInput, level
-            );
-            if (testRecipe.isEmpty()) {
-                // 当前火种与输入无法匹配任何配方 → 熄灭（清空火种记录）
-                entity.currentFuel = ItemStack.EMPTY;
-                entity.progress = 0;
-                entity.setChanged();
-            }
-        }
-
-        // 2. 如果未点火，尝试用火种槽物品点火
+        // 熄灭状态：当前火种为空 -> 进度归零，灯灭
         if (entity.currentFuel.isEmpty()) {
-            if (!fuelSlot.isEmpty()) {
-                HighOvenRecipeInput trialInput = new HighOvenRecipeInput(
-                        entity.inventory.getStackInSlot(0),
-                        entity.inventory.getStackInSlot(1),
-                        entity.inventory.getStackInSlot(2),
-                        fuelSlot
-                );
-                var trialRecipe = level.getRecipeManager().getRecipeFor(
-                        RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get(), trialInput, level
-                );
-                if (trialRecipe.isPresent()) {
-                    // 消耗火种并记录
-                    entity.ignite(fuelSlot.copy());
-                }
-            }
-            // 仍无法点火，停止生产
-            if (entity.currentFuel.isEmpty()) {
-                entity.progress = 0;
-                entity.tickPressure(level);
-                entity.updateLitState(level, pos, state);
-                return;
-            }
+            entity.progress = 0;
+            entity.updateLitState(level, pos, state, false);
+            return;
         }
 
-        // 3. 用 currentFuel 查找配方进行生产
-        HighOvenRecipeInput recipeInput = new HighOvenRecipeInput(
+        // 门开启 -> 强制熄火并重置
+        if (doorOpen) {
+            entity.extinguish(); // 清空 currentFuel + 进度归零
+            entity.updateLitState(level, pos, state, false);
+            return;
+        }
+
+        // 检查当前输入 + 火种是否还能匹配配方
+        HighOvenRecipeInput testInput = new HighOvenRecipeInput(
                 entity.inventory.getStackInSlot(0),
                 entity.inventory.getStackInSlot(1),
                 entity.inventory.getStackInSlot(2),
                 entity.currentFuel
         );
-        var recipeHolder = level.getRecipeManager().getRecipeFor(
-                RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get(), recipeInput, level
+        var testRecipe = level.getRecipeManager().getRecipeFor(
+                RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get(), testInput, level
         );
-
-        if (recipeHolder.isEmpty()) {
-            entity.progress = 0;
-            entity.tickPressure(level);
-            entity.updateLitState(level, pos, state);
+        if (testRecipe.isEmpty()) {
+            entity.extinguish(); // 配方失效 -> 熄火
+            entity.updateLitState(level, pos, state, false);
             return;
         }
 
-        HighOvenRecipe recipe = recipeHolder.get().value();
+        // 正常生产
+        HighOvenRecipe recipe = testRecipe.get().value();
         entity.maxProgress = recipe.getProcessingTime();
         entity.progress++;
 
@@ -188,37 +131,18 @@ public class HighOvenBlockEntity extends BlockEntity {
                 totalProduced += result.getCount();
             }
             if (totalProduced > 0) {
-                entity.insertOutputWithOverflow(result, totalProduced);
+                insertOutput(entity, result, totalProduced);
             }
             entity.progress = 0;
         }
 
+        entity.updateLitState(level, pos, state, true);
+        entity.setChanged();
     }
 
-    private void updateLitState(Level level, BlockPos pos, BlockState state) {
-        boolean shouldLit = progress > 0 || pressure > 0; // 超压或工作中发光
-        if (state.getValue(HighOvenBlock.LIT) != shouldLit) {
-            level.setBlock(pos, state.setValue(HighOvenBlock.LIT, shouldLit), 3);
-        }
-    }
 
-    // 点火
-    private void ignite(ItemStack fuelStack) {
-        if (fuelStack.isDamageableItem()) {
-            if (level instanceof ServerLevel serverLevel) {
-                fuelStack.hurtAndBreak(1, serverLevel, null, item -> {});
-                inventory.setStackInSlot(3, fuelStack.isEmpty() ? ItemStack.EMPTY : fuelStack);
-            }
-        } else {
-            inventory.extractItem(3, 1, false);
-        }
-        this.currentFuel = fuelStack.copy();
-        setChanged();
-    }
-
-    // ---------- 输出与溢出 ----------
-    private void insertOutputWithOverflow(ItemStack outputType, int amount) {
-        ItemStack outputStack = inventory.getStackInSlot(4);
+    private static void insertOutput(HighOvenBlockEntity entity, ItemStack outputType, int amount) {
+        ItemStack outputStack = entity.inventory.getStackInSlot(4);
         boolean canMerge = !outputStack.isEmpty()
                 && ItemStack.isSameItemSameComponents(outputStack, outputType);
         int space = 0;
@@ -232,121 +156,53 @@ public class HighOvenBlockEntity extends BlockEntity {
             ItemStack toPut = outputType.copy();
             toPut.setCount(toInsert);
             if (outputStack.isEmpty()) {
-                inventory.setStackInSlot(4, toPut);
+                entity.inventory.setStackInSlot(4, toPut);
             } else {
                 outputStack.grow(toInsert);
             }
-            amount -= toInsert;
         }
-        if (amount > 0) {
-            addToOverflow(outputType, amount);
-        }
+        // 若放不下则剩余物品直接丢弃（无溢出系统）
     }
 
-    private void addToOverflow(ItemStack item, int amount) {
-        while (amount > 0) {
-            int max = item.getMaxStackSize();
-            int toAdd = Math.min(amount, max);
-            boolean merged = false;
-            for (ItemStack existing : overflowItems) {
-                if (ItemStack.isSameItemSameComponents(existing, item)) {
-                    int space = max - existing.getCount();
-                    if (space > 0) {
-                        int add = Math.min(toAdd, space);
-                        existing.grow(add);
-                        toAdd -= add;
-                        if (toAdd <= 0) {
-                            merged = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!merged || toAdd > 0) {
-                ItemStack newStack = item.copy();
-                newStack.setCount(toAdd);
-                overflowItems.add(newStack);
-                amount -= toAdd;
-            } else {
-                amount -= toAdd;
-            }
+    // 更新 LIT 状态
+    private void updateLitState(Level level, BlockPos pos, BlockState state, boolean isWorking) {
+        if (state.getValue(HighOvenBlock.LIT) != isWorking) {
+            level.setBlock(pos, state.setValue(HighOvenBlock.LIT, isWorking), 3);
         }
     }
 
-    private int getTotalOverflowCount() {
-        int sum = 0;
-        for (ItemStack stack : overflowItems) sum += stack.getCount();
-        return sum;
-    }
-
-    private void tickPressure(Level level) {
-        int total = getTotalOverflowCount();
-        if (total > 0) {
-            pressure += total / 20.0f;
-            if (pressure >= MAX_PRESSURE) {
-                if (!level.isClientSide()) level.destroyBlock(worldPosition, false);
-                return;
-            }
+    // 点火逻辑（由 Block 调用，消耗玩家手中的物品）
+    public void ignite(ItemStack fuelStack, ServerLevel level) {
+        if (fuelStack.isDamageableItem()) {
+            fuelStack.hurtAndBreak(1, level, null, item -> {});
         } else {
-            if (pressure > 0) pressure = Math.max(0, pressure - 0.5f);
+            fuelStack.shrink(1);
         }
+        this.currentFuel = fuelStack.copy();
+        setChanged();
     }
 
-    // ---------- 客户端粒子 ----------
-    public static void clientTick(Level level, BlockPos pos, BlockState state, HighOvenBlockEntity entity) {
-        if (entity.pressure > 0 && level.isClientSide()) {
-            float density = entity.pressure / MAX_PRESSURE;
-            if (level.random.nextFloat() < density + 0.1) {
-                double x = pos.getX() + 0.5 + (level.random.nextDouble() - 0.5) * 0.7;
-                double y = pos.getY() + 1.0;
-                double z = pos.getZ() + 0.5 + (level.random.nextDouble() - 0.5) * 0.7;
-                level.addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.05, 0);
-                if (level.random.nextFloat() < Math.pow(density, 0.1)) {
-                    level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0.05, 0);
-                }
-            }
-        }
+    // 熄灭（由 Block 调用，例如门被打开或配方不再匹配）
+    public void extinguish() {
+        this.currentFuel = ItemStack.EMPTY;
+        this.progress = 0;
+        setChanged();
     }
 
-    // ---------- 玩家取出输出 ----------
-    public List<ItemStack> extractOutput(Player player) {
-        List<ItemStack> extracted = new ArrayList<>();
-        ItemStack output = inventory.getStackInSlot(4);
-        if (!output.isEmpty()) {
-            ItemStack taken = inventory.extractItem(4, output.getCount(), false);
-            if (!taken.isEmpty()) extracted.add(taken);
-        }
-        if (output.isEmpty() && !overflowItems.isEmpty()) {
-            ItemStack first = overflowItems.get(0).copy();
-            int takeAmount = Math.min(first.getCount(), first.getMaxStackSize());
-            first.setCount(takeAmount);
-            extracted.add(first);
-            overflowItems.get(0).shrink(takeAmount);
-            if (overflowItems.get(0).isEmpty()) overflowItems.remove(0);
-            setChanged();
-        }
-        return extracted;
+    public boolean isLit() {
+        return !currentFuel.isEmpty();
     }
 
-    // ---------- 持久化 ----------
+    // ---- 持久化 ----
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("inventory", inventory.serializeNBT(registries));
         tag.putInt("progress", progress);
         tag.putInt("maxProgress", maxProgress);
-        tag.putFloat("pressure", pressure);
         if (!currentFuel.isEmpty()) {
             tag.put("currentFuel", currentFuel.save(registries));
         }
-
-        ListTag overflowTag = new ListTag();
-        for (ItemStack stack : overflowItems) {
-            if (!stack.isEmpty()) {
-                overflowTag.add(stack.save(registries));
-            }
-        }
-        tag.put("overflowItems", overflowTag);
     }
 
     @Override
@@ -355,27 +211,16 @@ public class HighOvenBlockEntity extends BlockEntity {
         inventory.deserializeNBT(registries, tag.getCompound("inventory"));
         progress = tag.getInt("progress");
         maxProgress = tag.contains("maxProgress") ? tag.getInt("maxProgress") : 100;
-        pressure = tag.getFloat("pressure");
         if (tag.contains("currentFuel")) {
             currentFuel = ItemStack.parse(registries, tag.getCompound("currentFuel")).orElse(ItemStack.EMPTY);
         } else {
             currentFuel = ItemStack.EMPTY;
         }
-
-        overflowItems.clear();
-        if (tag.contains("overflowItems")) {
-            ListTag list = tag.getList("overflowItems", Tag.TAG_COMPOUND);
-            for (int i = 0; i < list.size(); i++) {
-                ItemStack stack = ItemStack.parse(registries, list.getCompound(i)).orElse(ItemStack.EMPTY);
-                if (!stack.isEmpty()) overflowItems.add(stack);
-            }
-        }
     }
 
-    // 在类中添加
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries); // 已有，没问题
+        return saveWithoutMetadata(registries);
     }
 
     @Nullable
@@ -383,8 +228,4 @@ public class HighOvenBlockEntity extends BlockEntity {
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
-
-    public float getPressure() { return pressure; }
-    // isLit 不再需要，但保留也行
-    public boolean isBurning() { return !currentFuel.isEmpty(); }
 }

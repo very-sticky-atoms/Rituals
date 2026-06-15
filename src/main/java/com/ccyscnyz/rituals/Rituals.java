@@ -8,6 +8,7 @@ import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeSerializers;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
+import com.ccyscnyz.rituals.script.RitualsScriptEngine;
 import com.ccyscnyz.rituals.util.TabItemCollector;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -54,6 +55,8 @@ public class Rituals {
         
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        RitualsScriptEngine.warmup();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

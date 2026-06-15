@@ -1,5 +1,6 @@
 package com.ccyscnyz.rituals.client.renderer;
 
+import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -37,7 +38,7 @@ public class EarthAltarRenderer implements BlockEntityRenderer<EarthAltarBlockEn
 
         poseStack.pushPose();
         // 移动到方块中心上方
-        poseStack.translate(0.5, 1.1 + 0.1 * Math.sin(gameTime * (speed / 50 + 0.1)), 0.5);
+        poseStack.translate(0.5, 1.1 + 0.1 * Math.sin(gameTime * (speed * 0.02 + 0.06)), 0.5);
         // 绕 Y 轴旋转
         poseStack.mulPose(Axis.YP.rotationDegrees(angle));
         // 缩放
