@@ -21,16 +21,16 @@ public record EarthAltarRecipeContext(ItemStack center, List<List<ItemStack>> di
     public EarthAltarRecipeContext copy(){
         return new EarthAltarRecipeContext(center.copy(),directionItems.stream().map(l->l.stream().map(ItemStack::copy).toList()).toList(),level,position);
     }
-    public EarthAltarRecipeContext with(ItemStack center){
+    public EarthAltarRecipeContext withCenter(ItemStack center){
         return new EarthAltarRecipeContext(center,directionItems,level,position);
     }
-    public EarthAltarRecipeContext with(List<List<ItemStack>> directionItems){
+    public EarthAltarRecipeContext withDirectionItems(List<List<ItemStack>> directionItems){
         return new EarthAltarRecipeContext(center,directionItems,level,position);
     }
-    public EarthAltarRecipeContext with(Level level){
+    public EarthAltarRecipeContext withLevel(Level level){
         return new EarthAltarRecipeContext(center,directionItems,level,position);
     }
-    public EarthAltarRecipeContext with(BlockPos position){
+    public EarthAltarRecipeContext withPosition(BlockPos position){
         return new EarthAltarRecipeContext(center,directionItems,level,position);
     }
     public Container wrap(){
@@ -42,20 +42,20 @@ public record EarthAltarRecipeContext(ItemStack center, List<List<ItemStack>> di
         public Container(EarthAltarRecipeContext context){
             this.value = context;
         }
-        public Container with(ItemStack center){
-            this.value = value.with(center);
+        public Container withCenter(ItemStack center){
+            this.value = value.withCenter(center);
             return this;
         }
-        public Container with(List<List<ItemStack>> directionItems){
-            this.value = value.with(directionItems);
+        public Container withDirectionItems(List<List<ItemStack>> directionItems){
+            this.value = value.withDirectionItems(directionItems);
             return this;
         }
-        public Container with(Level level){
-            this.value = value.with(level);
+        public Container withLevel(Level level){
+            this.value = value.withLevel(level);
             return this;
         }
-        public Container with(BlockPos position){
-            this.value = value.with(position);
+        public Container withPosition(BlockPos position){
+            this.value = value.withPosition(position);
             return this;
         }
     }
