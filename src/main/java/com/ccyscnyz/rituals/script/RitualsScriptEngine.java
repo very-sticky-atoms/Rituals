@@ -31,6 +31,16 @@ public class RitualsScriptEngine {
             Thread.currentThread().setContextClassLoader(RitualsScriptEngine.class.getClassLoader());
             eng = Engine.newBuilder().allowExperimentalOptions(true).build();
             Rituals.LOGGER.info("RitualsScriptEngine: GraalVM Engine initialized.");
+
+            if (!eng.getInstruments().containsKey("compiler")) {
+                Rituals.LOGGER.warn("=========================================================================");
+                Rituals.LOGGER.warn("[Rituals] Performance Optimization Notice:");
+                Rituals.LOGGER.warn("The script engine is running in 'Interpreter Mode'.");
+                Rituals.LOGGER.warn("To unlock full performance, ");
+                Rituals.LOGGER.warn("please enable JIT compilation (high performance) for ritual scripts");
+                Rituals.LOGGER.warn("by adding '-XX:+EnableJVMCI' to your server launch arguments.");
+                Rituals.LOGGER.warn("=========================================================================");
+            }
         } catch (Exception e) {
             Rituals.LOGGER.error("RitualsScriptEngine: Failed to initialize GraalVM Engine!", e);
         } finally {

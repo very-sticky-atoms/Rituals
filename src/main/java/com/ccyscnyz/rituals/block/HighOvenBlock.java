@@ -1,7 +1,9 @@
 package com.ccyscnyz.rituals.block;
 
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
+import com.ccyscnyz.rituals.recipe.HighOvenRecipeInput;
 import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -112,14 +114,26 @@ public class HighOvenBlock extends BaseEntityBlock {
         boolean lit = entity.isLit();
         ItemStack held = player.getItemInHand(hand);
 
-        // 左面：点火（仅当炉门关闭、未点燃且手持有效物品）
+        // 左面：点火（仅当炉门关闭、未点燃且手持有效物品，并可以匹配配方时）
         if (hitFace == leftSide) {
             if (!doorOpen && !lit && !held.isEmpty()) {
-                // 尝试点火
-                entity.ignite(held, (ServerLevel) level);
-                level.playSound(null, pos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0f, 1.0f);
-                entity.setChanged();
-                return ItemInteractionResult.SUCCESS;
+                // 检查当前输入物品与火种能否匹配配方
+                HighOvenRecipeInput testInput = new HighOvenRecipeInput(
+                        entity.inventory.getStackInSlot(0),
+                        entity.inventory.getStackInSlot(1),
+                        entity.inventory.getStackInSlot(2),
+                        held
+                );
+                var recipeHolder = level.getRecipeManager().getRecipeFor(
+                        RitualsRecipeTypes.HIGH_OVEN_RECIPE_TYPE.get(), testInput, level
+                );
+                if (recipeHolder.isPresent()) {
+                    // 可以点火，消耗火种
+                    entity.ignite(held, (ServerLevel) level);
+                    level.playSound(null, pos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0f, 1.0f);
+                    entity.setChanged();
+                    return ItemInteractionResult.SUCCESS;
+                }
             }
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
