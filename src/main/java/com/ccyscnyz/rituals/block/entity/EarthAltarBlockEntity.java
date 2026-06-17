@@ -151,21 +151,36 @@ public class EarthAltarBlockEntity extends BlockEntity {
 
         // 合成完毕
         if (entity.craftProgress >= entity.maxCraftTime) {
-            // 1. 正常执行 finish 脚本
+            // 1. 正常执行 finish 脚本，拿到带有新物品的 contextNew
             EarthAltarRecipeContext.FinishScriptResult finishScriptResult = recipe.runFinishScript(
                     entity.ritualContext.get(), recipeId.withSuffix("/finish"), context, entity.callback);
 
             EarthAltarRecipeContext contextNew = finishScriptResult.context();
             EarthAltarRecipeContext.Callback finalCallback = finishScriptResult.callback();
 
-            // 2. 🌟 核心修正：断开实体的 ritualContext 与 setRemoved 的强绑定
-            // 在调用可能导致方块自毁的闭包前，先把上下文从实体中“偷”出来存为局部变量
-            RitualsContextHolder activeContext = entity.ritualContext;
+            // 在执行任何闭包前，先更新世方块界中的容器物品
+            // 此时方块 100% 还在，直接写入最终产物（如钻石）
+            for (int dir = 0; dir < 8; dir++) {
+                int index = 0;
+                for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
+                    pillar.inventory.extractItem(0, 1, false);
+                    pillar.inventory.setStackInSlot(0, contextNew.directionItems().get(dir).get(index).copy());
+                    pillar.setChanged();
+                    level.sendBlockUpdated(pillar.getBlockPos(), pillar.getBlockState(), pillar.getBlockState(), 2);
+                    index++;
+                }
+            }
+            entity.inventory.extractItem(0, 1, false);
+            entity.inventory.setStackInSlot(0, contextNew.center().copy());
+            entity.setChanged();
+            level.sendBlockUpdated(pos, state, state, 3);
 
-            // 将实体的指针清空，这样即使闭包内触发了 setRemoved()，也不会触发 entity.ritualContext.close() 导致自噬
+            // 3. 断开实体的 ritualContext 与 setRemoved 的强绑定，防止自噬
+            RitualsContextHolder activeContext = entity.ritualContext;
             entity.ritualContext = null;
 
-            // 3. 触发由 JS 产生的闭包完成回调（此时自毁不会伤及正在运行的 activeContext）
+            // 4. 此时放心地触发 Callback。如果脚本执行了 destroyBlock()，
+            // 游戏倾倒出来的将是刚刚已经写入容器的“钻石”！
             if (finalCallback != null) {
                 try {
                     finalCallback.call(contextNew);
@@ -174,37 +189,18 @@ public class EarthAltarBlockEntity extends BlockEntity {
                 }
             }
 
-            // 4. 判断一下方块是否已经被脚本自毁了
-            boolean alreadyRemoved = entity.isRemoved();
-
-            // 5. 如果方块还没被摧毁，我们继续正常把产物塞进去
-            if (!alreadyRemoved) {
-                for (int dir = 0; dir < 8; dir++) {
-                    int index = 0;
-                    for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
-                        pillar.inventory.extractItem(0, 1, false);
-                        pillar.inventory.setStackInSlot(0, contextNew.directionItems().get(dir).get(index).copy());
-                        pillar.setChanged();
-                        level.sendBlockUpdated(pillar.getBlockPos(), pillar.getBlockState(), pillar.getBlockState(), 2);
-                        index++;
-                    }
-                }
-                entity.inventory.extractItem(0, 1, false);
-                entity.inventory.setStackInSlot(0, contextNew.center().copy());
-            }
-
-            // 6. 重置基础状态
+            // 5. 重置基础状态
             entity.craftProgress = 0;
             entity.currentRecipe = null;
             entity.callback = ctx -> {};
 
-            // 7. 🌟 此时脚本、物品操作全部安全落幕，局部变量里干净地关闭沙箱
+            // 6. 关闭并清理常驻沙箱
             if (activeContext != null) {
                 activeContext.close();
             }
 
-            // 8. 播放视听特效（如果方块还在的话）
-            if (level instanceof ServerLevel serverLevel) {
+            // 7. 播放视听特效
+            if (!entity.isRemoved() && level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 20, 0.5, 0.5, 0.5, 0.1);
                 serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 2.0F, 1.0F);
             }

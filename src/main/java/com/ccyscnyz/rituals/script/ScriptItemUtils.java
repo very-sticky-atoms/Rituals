@@ -1,80 +1,123 @@
 package com.ccyscnyz.rituals.script;
 
+import com.ccyscnyz.rituals.Rituals;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.graalvm.polyglot.Value;
+
+import java.util.*;
 
 public class ScriptItemUtils {
 
-    // 通过 "namespace:id" 获取纯净的 Item 实例
+    private static final Gson GSON = new Gson();
+
     public static ItemStack getItem(String itemId, int count) {
         ResourceLocation rl = ResourceLocation.tryParse(itemId.contains(":") ? itemId : "minecraft:" + itemId);
         if (rl == null) return ItemStack.EMPTY;
-
         Item item = BuiltInRegistries.ITEM.get(rl);
-        // 如果注册表里找不到（比如拼错了），返回 EMPTY 防止崩溃
         if (item == BuiltInRegistries.ITEM.get(BuiltInRegistries.ITEM.getDefaultKey())) {
             return ItemStack.EMPTY;
         }
         return new ItemStack(item, count);
     }
 
-    // 通过 "namespace:id" 动态设置任意组件
+
     @SuppressWarnings("unchecked")
-    public static void setComponent(ItemStack stack, String componentId, Object value) {
+    public static void setComponent(ItemStack stack, String componentId, Object rawValue, HolderLookup.Provider registries) {
         if (stack.isEmpty()) return;
 
         ResourceLocation rl = ResourceLocation.tryParse(componentId.contains(":") ? componentId : "minecraft:" + componentId);
-        if (rl == null) return;
-
         DataComponentType<?> componentType = BuiltInRegistries.DATA_COMPONENT_TYPE.get(rl);
         if (componentType == null) return;
 
-        // 处理 JS 传入的快捷基础类型转换
-        Object processedValue = value;
-        String path = rl.getPath();
+        Object javaValue = toJavaObject(rawValue);
+        String json = (javaValue instanceof String s) ? s : GSON.toJson(javaValue);
 
-        if (value instanceof Boolean b) {
-            if ("unbreakable".equals(path)) {
-                processedValue = new net.minecraft.world.item.component.Unbreakable(b);
-            }
-        } else if (value instanceof net.minecraft.nbt.CompoundTag tag) {
-            if ("custom_data".equals(path)) {
-                processedValue = net.minecraft.world.item.component.CustomData.of(tag);
-            }
+        // 尝试一：先尝试将其作为“文本组件”解析
+        // 只有 custom_name, lore 等 Component 类组件会成功，其他非文本组件会抛出异常
+        try {
+            Object component = Component.Serializer.fromJsonLenient(json, registries);
+            // 如果这里没报错，说明它是 Component 类型，直接设置
+            stack.set((DataComponentType<Object>) componentType, component);
+            return;
+        } catch (Exception ignored) {
+            // 解析失败，说明不是文本组件，进入尝试二
         }
 
-        // 物理拍入组件
-        stack.set((DataComponentType<Object>) componentType, processedValue);
+        // 尝试二：使用组件自带的 Codec 进行通用解析
+        try {
+            JsonElement jsonElement = JsonParser.parseString(json);
+            RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
+
+            Object componentValue = componentType.codecOrThrow()
+                    .parse(ops, jsonElement)
+                    .getOrThrow();
+
+            stack.set((DataComponentType<Object>) componentType, componentValue);
+        } catch (Exception e) {
+            Rituals.LOGGER.error("Failed to set component '{}' with JSON '{}': {}", componentId, json, e.getMessage());
+        }
     }
 
-    // 通过 "namespace:id" 动态获取任意组件
+    // 递归将 GraalJS Value 或 Java 对象转换为普通 Java 对象（Map、List、String、Number、Boolean）。
+    private static Object toJavaObject(Object value) {
+        if (value instanceof Value val) {
+            if (val.isNull()) return null;
+            if (val.isString()) return val.asString();
+            if (val.isBoolean()) return val.asBoolean();
+            if (val.isNumber()) return val.as(Number.class);
+            if (val.hasMembers()) {
+                Map<String, Object> map = new LinkedHashMap<>();
+                for (String key : val.getMemberKeys()) {
+                    map.put(key, toJavaObject(val.getMember(key)));
+                }
+                return map;
+            }
+            if (val.hasArrayElements()) {
+                List<Object> list = new ArrayList<>();
+                for (int i = 0; i < val.getArraySize(); i++) {
+                    list.add(toJavaObject(val.getArrayElement(i)));
+                }
+                return list;
+            }
+            return val.toString();
+        } else if (value instanceof Map) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            ((Map<?, ?>) value).forEach((k, v) -> map.put(String.valueOf(k), toJavaObject(v)));
+            return map;
+        } else if (value instanceof List) {
+            List<Object> list = new ArrayList<>();
+            for (Object o : (List<?>) value) list.add(toJavaObject(o));
+            return list;
+        }
+        return value;
+    }
+
     public static Object getComponent(ItemStack stack, String componentId) {
         if (stack.isEmpty()) return null;
-
         ResourceLocation rl = ResourceLocation.tryParse(componentId.contains(":") ? componentId : "minecraft:" + componentId);
         if (rl == null) return null;
-
         DataComponentType<?> componentType = BuiltInRegistries.DATA_COMPONENT_TYPE.get(rl);
         if (componentType == null) return null;
-
         return stack.get(componentType);
     }
 
-
-    //小工，用于快速处理customdata
     public static void mergeCustomData(ItemStack stack, net.minecraft.nbt.CompoundTag newTag) {
         if (stack.isEmpty() || newTag == null || newTag.isEmpty()) return;
-
-        // 利用 1.21 官方推荐的 update 机制，如果原本没有 custom_data 会自动创建空的，如果有则传入闭包
         stack.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.EMPTY,
-                customData -> customData.update(existingTag -> {
-                    // 将新传入的 tag 的所有键值对放入现有的 tag
-                    existingTag.merge(newTag);
-                })
+                customData -> customData.update(existingTag -> existingTag.merge(newTag))
         );
     }
 }

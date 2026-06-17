@@ -63,10 +63,14 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 int[] ptContainer = {processingTime};
                 EarthAltarRecipeContext.CallbackContainer cbkContainer = new EarthAltarRecipeContext.CallbackContainer(callback);
 
+                // Start 阶段也统一使用复制后的 Container 包装结构！
+                EarthAltarRecipeContext.Container ctxContainer = context.copy().wrap();
+
                 if (persistentContext != null) {
                     // 如果传入了常驻上下文，直接在其中绑定并执行
                     Value jsBindings = persistentContext.getBindings("js");
-                    jsBindings.putMember("context", context.copy());
+                    // 变量名规定为 "context"
+                    jsBindings.putMember("context", ctxContainer);
                     jsBindings.putMember("processingTime", ptContainer);
                     jsBindings.putMember("callback", cbkContainer);
 
@@ -75,14 +79,23 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 } else {
                     // 降级使用一次性沙箱（兼容不常驻的普通脚本）
                     Map<String, Object> bindings = new java.util.HashMap<>();
-                    bindings.put("context", context.copy());
+                    // 变量名统一为 "context"
+                    bindings.put("context", ctxContainer);
                     bindings.put("processingTime", ptContainer);
                     bindings.put("callback", cbkContainer);
                     RitualsScriptEngine.executeCached(scriptSource, craftStartScript.get(), bindings);
                 }
+
+                // 如果 start 脚本中修改了 context.value 里的不可变对象，也能被正确捕获返回
                 return new EarthAltarRecipeContext.StartScriptResult(ptContainer[0], cbkContainer.value);
             } catch (Exception e) {
-                Rituals.LOGGER.error("Failed to execute start script {}: {}", scriptSource, e.getMessage(), e);
+                Rituals.LOGGER.error("==== RITUALS SCRIPT CRASH REPORT ====");
+                Rituals.LOGGER.error("Script URI: {}", scriptSource);
+                Rituals.LOGGER.error("Script Content In Memory:\n{}", craftStartScript.orElse("EMPTY"));
+                Rituals.LOGGER.error("Is Persistent Context Null?: {}", (persistentContext == null));
+                Rituals.LOGGER.error("Actual Center Item Class: {}", (context.center() != null ? context.center().getClass().getName() : "null"));
+                Rituals.LOGGER.error("=====================================");
+                Rituals.LOGGER.error("Failed to execute start script", e);
             }
         }
         return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
@@ -98,6 +111,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
                 if (persistentContext != null) {
                     Value jsBindings = persistentContext.getBindings("js");
+                    // 变量名在持久上下文中也是 "context"
                     jsBindings.putMember("context", ctxContainer);
                     jsBindings.putMember("callback", cbkContainer);
 
@@ -113,7 +127,13 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 Rituals.LOGGER.debug("Script returned: {}", scriptResult);
                 return scriptResult;
             } catch (Exception e) {
-                Rituals.LOGGER.error("Failed to execute finish script {}: {}", scriptSource, e.getMessage(), e);
+                Rituals.LOGGER.error("==== RITUALS SCRIPT CRASH REPORT ====");
+                Rituals.LOGGER.error("Script URI: {}", scriptSource);
+                Rituals.LOGGER.error("Script Content In Memory:\n{}", craftFinishScript.orElse("EMPTY"));
+                Rituals.LOGGER.error("Is Persistent Context Null?: {}", (persistentContext == null));
+                Rituals.LOGGER.error("Actual Center Item Class: {}", (context.center() != null ? context.center().getClass().getName() : "null"));
+                Rituals.LOGGER.error("=====================================");
+                Rituals.LOGGER.error("Failed to execute finish script", e);
             }
         }
 
@@ -125,7 +145,9 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             }
             consumed.add(consumedDirection);
         }
-        return new EarthAltarRecipeContext.FinishScriptResult(context.with(output.copy()).with(consumed), callback);
+        // 当没有脚本时，回退调用新的显式方法名防止编译或运行期错误
+        EarthAltarRecipeContext finalContext = context.withCenter(output.copy()).withDirectionItems(consumed);
+        return new EarthAltarRecipeContext.FinishScriptResult(finalContext, callback);
     }
 
     @Override
