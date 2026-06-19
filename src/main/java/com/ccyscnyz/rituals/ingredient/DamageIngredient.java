@@ -29,7 +29,6 @@ public class DamageIngredient implements ICustomIngredient {
 
     @Override
     public Stream<ItemStack> getItems() {
-        // 修复：base.getItems() 返回的是数组，需要用 Arrays.stream() 转换
         return Arrays.stream(base.getItems());
     }
 
@@ -38,19 +37,16 @@ public class DamageIngredient implements ICustomIngredient {
         return false;
     }
 
-    // 1.21.1 核心改动：返回 getType 而不是 serializer
     @Override
     public IngredientType<?> getType() {
         return RitualsIngredientTypes.DAMAGE.get();
     }
 
-    // 工业级耐久扣除逻辑（无需 ServerLevel）
     public ItemStack consume(ItemStack stack) {
         ItemStack result = stack.copy();
         int currentDamage = result.getDamageValue();
         int newDamage = currentDamage + damage;
 
-        // 如果扣除后耐久超过最大耐久，物品直接破碎（返回空）
         if (newDamage >= result.getMaxDamage()) {
             return ItemStack.EMPTY;
         }

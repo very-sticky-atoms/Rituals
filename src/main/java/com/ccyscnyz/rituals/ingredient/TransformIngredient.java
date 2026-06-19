@@ -37,7 +37,6 @@ public class TransformIngredient implements ICustomIngredient {
         return false;
     }
 
-    // 1.21.1 核心改动
     @Override
     public IngredientType<?> getType() {
         return RitualsIngredientTypes.TRANSFORM.get();

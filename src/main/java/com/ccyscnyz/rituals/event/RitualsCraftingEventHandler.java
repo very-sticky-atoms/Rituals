@@ -18,7 +18,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-@EventBusSubscriber(modid = Rituals.MODID) // 省略 bus，默认就是 GAME
+@EventBusSubscriber(modid = Rituals.MODID)
 public class RitualsCraftingEventHandler {
 
     @SubscribeEvent
@@ -29,7 +29,6 @@ public class RitualsCraftingEventHandler {
         Container container = event.getInventory();
         if (!(container instanceof CraftingContainer craftingContainer)) return;
 
-        // 1.21.1 强行包装出 RecipeManager 认识的 CraftingInput
         int width = craftingContainer.getWidth();
         int height = craftingContainer.getHeight();
         List<ItemStack> items = new ArrayList<>();
@@ -55,24 +54,20 @@ public class RitualsCraftingEventHandler {
 
                                 // 扣耐久逻辑
                                 if (custom instanceof DamageIngredient dmg) {
-                                    // 预扣除：调用你写好的 consume，算出扣完耐久后的新物品
+                                    // 预扣除：算出扣完耐久后的新物品
                                     ItemStack ruined = dmg.consume(stackInSlot);
 
-                                    // 因为原版马上就会执行 count - 1，所以如果物品没碎，我们得强行把 count 设为 2
-                                    // 这样原版减完 1 之后，留在格子里的刚好就是 count = 1 且掉了耐久的武器！
                                     if (!ruined.isEmpty()) {
                                         net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().execute(() -> {
-                                            // 强制将扣除耐久后的物品放回对应索引
                                             craftingContainer.setItem(slotIndex, ruined);
                                         });
                                     }
                                 }
 
-                                // 物品转换逻辑（如岩浆桶变水桶）
+                                // 物品转换逻辑
                                 else if (custom instanceof TransformIngredient trans) {
                                     ItemStack remnant = trans.consume();
                                     net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().execute(() -> {
-                                        // 强制将扣除耐久后的物品放回对应索引
                                         craftingContainer.setItem(slotIndex, remnant);
                                     });
                                 }
