@@ -55,15 +55,9 @@ public class RitualsScriptEngine {
 
         jsBindings.putMember("ItemStack", net.minecraft.world.item.ItemStack.class);
         jsBindings.putMember("Items", net.minecraft.world.item.Items.class);
-        jsBindings.putMember("MutableComponent", net.minecraft.network.chat.MutableComponent.class); // 关键
-        jsBindings.putMember("Style", net.minecraft.network.chat.Style.class);
-        jsBindings.putMember("TextColor", net.minecraft.network.chat.TextColor.class);
         jsBindings.putMember("ChatFormatting", net.minecraft.ChatFormatting.class);
         jsBindings.putMember("CompoundTag", net.minecraft.nbt.CompoundTag.class);
         jsBindings.putMember("DataComponents", net.minecraft.core.component.DataComponents.class);
-        jsBindings.putMember("CustomData", net.minecraft.world.item.component.CustomData.class);
-        jsBindings.putMember("Enchantments", net.minecraft.world.item.enchantment.ItemEnchantments.class);
-        jsBindings.putMember("Unbreakable", net.minecraft.world.item.component.Unbreakable.class);
 
         context.eval("js",
                 "globalThis.Item = {" +

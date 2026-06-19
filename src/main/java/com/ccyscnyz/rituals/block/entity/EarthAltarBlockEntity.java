@@ -159,7 +159,6 @@ public class EarthAltarBlockEntity extends BlockEntity {
             EarthAltarRecipeContext.Callback finalCallback = finishScriptResult.callback();
 
             // 在执行任何闭包前，先更新世方块界中的容器物品
-            // 此时方块 100% 还在，直接写入最终产物（如钻石）
             for (int dir = 0; dir < 8; dir++) {
                 int index = 0;
                 for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
@@ -179,8 +178,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
             RitualsContextHolder activeContext = entity.ritualContext;
             entity.ritualContext = null;
 
-            // 4. 此时放心地触发 Callback。如果脚本执行了 destroyBlock()，
-            // 游戏倾倒出来的将是刚刚已经写入容器的“钻石”！
+            // 4. 此时触发 Callback。
             if (finalCallback != null) {
                 try {
                     finalCallback.call(contextNew);
@@ -200,7 +198,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
             }
 
             // 7. 播放视听特效
-            if (!entity.isRemoved() && level instanceof ServerLevel serverLevel) {
+            if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 20, 0.5, 0.5, 0.5, 0.1);
                 serverLevel.playSound(null, pos, SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 2.0F, 1.0F);
             }
