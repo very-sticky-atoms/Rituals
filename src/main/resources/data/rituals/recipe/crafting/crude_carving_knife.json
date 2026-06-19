@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " XF",
+    " IX",
+    "I  "
+  ],
+  "key": {
+    "I": {"tag": "c:rods/wooden"},
+    "X": {"tag": "c:strings"},
+    "F": {"item": "minecraft:flint"}
+  },
+  "result": {
+    "id": "rituals:crude_carving_knife",
+    "count": 1
+  }
+}

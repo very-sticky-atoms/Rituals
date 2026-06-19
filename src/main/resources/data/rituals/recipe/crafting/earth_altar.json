@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " K ",
+    "SSS",
+    "AAA"
+  ],
+  "key": {
+    "K": {"tag": "rituals:carving_knives"},
+    "S": {"tag": "minecraft:smooth_stone"},
+    "A": {"item": "minecraft:polished_andesite"}
+  },
+  "result": {
+    "id": "rituals:earth_altar",
+    "count": 1
+  }
+}

@@ -2,7 +2,12 @@ package com.ccyscnyz.rituals.registry.item;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.annotation.TabItem;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -11,6 +16,24 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class RitualsItems {
     public static final DeferredRegister.Items ITEMS =
             DeferredRegister.createItems(Rituals.MODID);
+
+
+    @TabItem("rituals_tab")
+    public static final DeferredItem<Item> CRUDE_CARVING_KNIFE = ITEMS.register("crude_carving_knife",
+            () -> new Item(new Item.Properties()
+                    .durability(16)
+                    .stacksTo(1)
+                    .attributes(ItemAttributeModifiers.builder()
+                            .add(
+                                    Attributes.ATTACK_DAMAGE,
+                                    new AttributeModifier(
+                                            ResourceLocation.withDefaultNamespace("base_attack_damage"),
+                                            4.0d,
+                                            AttributeModifier.Operation.ADD_VALUE
+                                    ),
+                                    EquipmentSlotGroup.MAINHAND
+                            )
+                            .build())));
 
     @TabItem("rituals_tab")
     public static final DeferredItem<Item> STEEL_INGOT = ITEMS.register("steel_ingot",
