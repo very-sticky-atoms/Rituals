@@ -2,7 +2,7 @@
   "type": "rituals:earth_altar",
   "center": { "item": "minecraft:raw_iron" },
   "inputs": [
-    [{"tag": "minecraft:sand"}],
+    [{"air": true}, {"tag": "minecraft:sand"}],
     [],
     [{"item": "minecraft:copper_ingot"}],
     [],

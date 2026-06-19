@@ -28,7 +28,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
     private final ItemStack output;
     private final int processingTime;
 
-    // 【核心变更】：将原先的 String 彻底升级为指向独立 JS 资源路径的 ResourceLocation 指针
     private final Optional<ResourceLocation> craftStartScriptUri;
     private final Optional<ResourceLocation> craftFinishScriptUri;
 
@@ -45,20 +44,68 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
     @Override
     public boolean matches(EarthAltarRecipeContext input, Level level) {
-        if (!center.test(input.center())) return false;
+        // ---- 诊断日志开始 ----
+        Rituals.LOGGER.info("=== 开始大地祭坛配方匹配检查 ===");
+        Rituals.LOGGER.info("配方预期产物: {}", this.output.getItem().toString());
+
+        // 1. 检查中心物品
+        boolean centerMatch = center.test(input.center());
+        Rituals.LOGGER.info("中心物品检查: 配方要求={}, 实际放入={}, 结果={}",
+                Arrays.toString(center.getItems()), input.center(), centerMatch);
+        if (!centerMatch) {
+            Rituals.LOGGER.info("匹配失败: 中心物品不匹配");
+            return false;
+        }
+
+        // 2. 检查八个方向
+        String[] dirNames = {"北(0)", "东北(1)", "东(2)", "东南(3)", "南(4)", "西南(5)", "西(6)", "西北(7)"};
+
         for (int dir = 0; dir < 8; dir++) {
             List<Ingredient> required = inputs.get(dir);
             List<ItemStack> actual = input.directionItems().get(dir);
-            if (required.size() != actual.size()) return false;
-            for (int i = 0; i < required.size(); i++) {
-                if (!required.get(i).test(actual.get(i))) return false;
+
+            int maxCheck = Math.max(required.size(), actual.size());
+            Rituals.LOGGER.info("方向 {} 检查: 配方要求槽数={}, 实际世界槽数={}", dirNames[dir], required.size(), actual.size());
+
+            for (int i = 0; i < maxCheck; i++) {
+                Ingredient req = i < required.size() ? required.get(i) : Ingredient.EMPTY;
+                ItemStack act = i < actual.size() ? actual.get(i) : ItemStack.EMPTY;
+
+                // 判断配方是否期望此处为空气
+                // 1.21.1 中，如果 JSON 写了空气，req.isEmpty() 为 true，或者内部包含了 description 带有 air 的项
+                boolean reqExpectsEmpty = req.isEmpty() || req == Ingredient.EMPTY;
+                if (!reqExpectsEmpty) {
+                    // 兼容写了 {"item": "minecraft:air"} 的情况
+                    for (ItemStack item : req.getItems()) {
+                        if (item.is(net.minecraft.world.item.Items.AIR)) {
+                            reqExpectsEmpty = true;
+                            break;
+                        }
+                    }
+                }
+
+                Rituals.LOGGER.info("  -> 槽位 [{}]: 配方期望为空={}, 实际物品={}", i, reqExpectsEmpty, act);
+
+                if (reqExpectsEmpty) {
+                    if (!act.isEmpty()) {
+                        Rituals.LOGGER.info("匹配失败: 方向 {} 槽位 [{}] 应该是空的，但实际有物品 {}", dirNames[dir], i, act);
+                        return false;
+                    }
+                } else {
+                    if (act.isEmpty() || !req.test(act)) {
+                        Rituals.LOGGER.info("匹配失败: 方向 {} 槽位 [{}] 物品不匹配。期望={}, 实际={}",
+                                dirNames[dir], i, Arrays.toString(req.getItems()), act);
+                        return false;
+                    }
+                }
             }
         }
+
+        Rituals.LOGGER.info("=== 配方完全匹配成功！ ===");
         return true;
     }
 
     public EarthAltarRecipeContext.StartScriptResult runStartScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, int processingTime, EarthAltarRecipeContext.Callback callback) {
-        // 如果没有配置指向的脚本文件，直接返回
         if (craftStartScriptUri.isEmpty()) {
             return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
         }
@@ -77,7 +124,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 jsBindings.putMember("processingTime", ptContainer);
                 jsBindings.putMember("callback", cbkContainer);
 
-                // 【调用变更为 URI 加载】
                 RitualsScriptEngine.evalUriInContext(persistentContext, finalScriptTarget);
             } else {
                 Map<String, Object> bindings = new java.util.HashMap<>();
@@ -85,7 +131,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 bindings.put("processingTime", ptContainer);
                 bindings.put("callback", cbkContainer);
 
-                // 【调用变更为 URI 加载】
                 RitualsScriptEngine.executeUriCached(finalScriptTarget, bindings);
             }
 
@@ -93,7 +138,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
         } catch (Exception e) {
             Rituals.LOGGER.error("==== RITUALS SCRIPT CRASH REPORT ====");
             Rituals.LOGGER.error("Script URI Pointer: {}", finalScriptTarget);
-            Rituals.LOGGER.error("Is Persistent Context Null?: {}", (persistentContext == null));
             Rituals.LOGGER.error("=====================================");
             Rituals.LOGGER.error("Failed to execute start script from resource", e);
         }
@@ -102,7 +146,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
     public EarthAltarRecipeContext.FinishScriptResult runFinishScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, EarthAltarRecipeContext.Callback callback) {
         if (craftFinishScriptUri.isEmpty()) {
-            // 当没有脚本时，回退到原有的清除网格、给予标准产物的默认行为
             List<List<ItemStack>> consumed = new ArrayList<>();
             for (int dir = 0; dir < 8; dir++) {
                 List<ItemStack> consumedDirection = new ArrayList<>();
@@ -127,19 +170,16 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
                 jsBindings.putMember("context", ctxContainer);
                 jsBindings.putMember("callback", cbkContainer);
 
-                // 【调用变更为 URI 加载】
                 RitualsScriptEngine.evalUriInContext(persistentContext, finalScriptTarget);
             } else {
                 Map<String, Object> bindings = new java.util.HashMap<>();
                 bindings.put("context", ctxContainer);
                 bindings.put("callback", cbkContainer);
 
-                // 【调用变更为 URI 加载】
                 RitualsScriptEngine.executeUriCached(finalScriptTarget, bindings);
             }
 
             EarthAltarRecipeContext.FinishScriptResult scriptResult = new EarthAltarRecipeContext.FinishScriptResult(ctxContainer.value.copy(), cbkContainer.value);
-            Rituals.LOGGER.debug("Script returned: {}", scriptResult);
             return scriptResult;
         } catch (Exception e) {
             Rituals.LOGGER.error("==== RITUALS SCRIPT CRASH REPORT ====");
@@ -182,11 +222,29 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
     public List<Ingredient> getInputsForDirection(int dir) { return inputs.get(dir); }
     public int getProcessingTime() { return processingTime; }
 
-    // ---- Codec 升级：改为支持 ResourceLocation 的解析 ----
+    // 创建一个中转用的 Codec，能够同时兼容原版 Ingredient 和 rituals_air 标记
+    private static final Codec<Ingredient> ADVANCED_INGREDIENT_CODEC = Codec.either(
+            Codec.BOOL.fieldOf("air").codec(), // 优先匹配 {"rituals_air": true}
+            Ingredient.CODEC                           // 匹配不到则走原版 Ingredient
+    ).xmap(
+            either -> either.map(
+                    isAir -> Ingredient.EMPTY, // 如果匹配到 rituals_air，在内存中直接变成 Ingredient.EMPTY
+                    ingredient -> ingredient   // 如果是原版，保持原样
+            ),
+            ingredient -> {
+                if (ingredient.isEmpty()) {
+                    // 这里只是 Getter 用，实际上序列化回去可以变成普通的或者是原版
+                    return com.mojang.datafixers.util.Either.left(true);
+                }
+                return com.mojang.datafixers.util.Either.right(ingredient);
+            }
+    );
+
     public static final MapCodec<EarthAltarRecipe> CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
                     Ingredient.CODEC.fieldOf("center").forGetter(r -> r.center),
-                    Codec.list(Codec.list(Ingredient.CODEC)).fieldOf("inputs").forGetter(r -> r.inputs),
+                    // 使用我们升级后的双重判断 Codec 来读取 inputs 列表
+                    Codec.list(Codec.list(ADVANCED_INGREDIENT_CODEC)).fieldOf("inputs").forGetter(r -> r.inputs),
                     ItemStack.CODEC.fieldOf("output").forGetter(r -> r.output),
                     Codec.INT.fieldOf("processingTime").forGetter(r -> r.processingTime),
                     ResourceLocation.CODEC.optionalFieldOf("craftStartScript").forGetter(r -> r.craftStartScriptUri),
@@ -194,7 +252,6 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             ).apply(instance, EarthAltarRecipe::new)
     );
 
-    // ---- StreamCodec 升级：同步网络传输 ResourceLocation ----
     public static final StreamCodec<RegistryFriendlyByteBuf, EarthAltarRecipe> STREAM_CODEC =
             StreamCodec.of(
                     (buf, recipe) -> {
