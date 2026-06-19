@@ -31,7 +31,7 @@ public class RitualsBlockEntities {
             BLOCK_ENTITIES.register("ritual_pillar",
                     () -> BlockEntityType.Builder.of(
                             RitualPillarBlockEntity::new,
-                            RitualsBlocks.RITUAL_PILLAR.get()
+                            RitualsBlocks.EARTH_RITUAL_PILLAR.get()
                     ).build(null)
             );
 

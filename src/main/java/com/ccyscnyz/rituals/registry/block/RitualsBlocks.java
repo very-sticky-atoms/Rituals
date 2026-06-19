@@ -26,7 +26,7 @@ public class RitualsBlocks {
     );
 
     @AutoBlockItem(tab = "rituals_tab")
-    public static final DeferredBlock<Block> RITUAL_PILLAR = BLOCKS.register("ritual_pillar",
+    public static final DeferredBlock<Block> EARTH_RITUAL_PILLAR = BLOCKS.register("earth_ritual_pillar",
             () -> new RitualPillarBlock(BlockBehaviour.Properties.of()
                     .strength(3.5F)
                     .requiresCorrectToolForDrops()
