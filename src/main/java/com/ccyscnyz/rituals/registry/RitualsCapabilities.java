@@ -1,11 +1,10 @@
-package com.ccyscnyz.rituals.registry.capability;
+package com.ccyscnyz.rituals.registry;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
 import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
 import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
 import com.ccyscnyz.rituals.util.SidedItemHandler;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;

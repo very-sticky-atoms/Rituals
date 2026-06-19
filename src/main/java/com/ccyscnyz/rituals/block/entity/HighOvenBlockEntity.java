@@ -3,7 +3,7 @@ package com.ccyscnyz.rituals.block.entity;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
 import com.ccyscnyz.rituals.recipe.HighOvenRecipe;
 import com.ccyscnyz.rituals.recipe.HighOvenRecipeInput;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;

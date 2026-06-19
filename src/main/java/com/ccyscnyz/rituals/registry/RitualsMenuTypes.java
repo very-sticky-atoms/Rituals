@@ -1,4 +1,4 @@
-package com.ccyscnyz.rituals.registry.menu;
+package com.ccyscnyz.rituals.registry;
 
 import com.ccyscnyz.rituals.Rituals;
 import net.minecraft.core.registries.Registries;

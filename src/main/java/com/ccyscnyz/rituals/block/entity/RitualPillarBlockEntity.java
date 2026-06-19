@@ -1,6 +1,6 @@
 package com.ccyscnyz.rituals.block.entity;
 
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

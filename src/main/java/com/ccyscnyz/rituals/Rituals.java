@@ -1,9 +1,9 @@
 package com.ccyscnyz.rituals;
 
-import com.ccyscnyz.rituals.datagen.RitualsItemModelProvider;
 import com.ccyscnyz.rituals.registry.block.BlockItemRegistrar;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsIngredientTypes;
 import com.ccyscnyz.rituals.registry.item.RitualsCreativeTabs;
 import com.ccyscnyz.rituals.registry.item.RitualsItems;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeSerializers;
@@ -12,7 +12,6 @@ import com.ccyscnyz.rituals.script.RitualsScriptEngine;
 import com.ccyscnyz.rituals.util.TabItemCollector;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 
@@ -45,6 +44,8 @@ public class Rituals {
         RitualsBlocks.BLOCKS.register(modEventBus);
 
         BlockItemRegistrar.process(MODID);
+
+        RitualsIngredientTypes.INGREDIENT_TYPES.register(modEventBus);
 
         RitualsBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         RitualsRecipeTypes.RECIPE_TYPES.register(modEventBus);

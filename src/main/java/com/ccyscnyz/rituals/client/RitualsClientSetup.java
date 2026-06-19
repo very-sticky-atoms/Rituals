@@ -4,7 +4,7 @@ import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.client.renderer.EarthAltarRenderer;
 import com.ccyscnyz.rituals.client.renderer.HighOvenRenderer;
 import com.ccyscnyz.rituals.client.renderer.RitualPillarRenderer;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

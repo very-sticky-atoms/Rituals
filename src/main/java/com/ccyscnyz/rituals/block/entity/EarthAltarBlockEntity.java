@@ -2,7 +2,7 @@ package com.ccyscnyz.rituals.block.entity;
 
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipe;
 import com.ccyscnyz.rituals.recipe.EarthAltarRecipeContext;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
 import com.ccyscnyz.rituals.registry.recipe.RitualsRecipeTypes;
 import com.ccyscnyz.rituals.script.RitualsContextHolder;
 import net.minecraft.core.BlockPos;

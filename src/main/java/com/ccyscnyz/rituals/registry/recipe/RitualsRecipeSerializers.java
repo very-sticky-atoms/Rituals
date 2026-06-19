@@ -38,6 +38,4 @@ public class RitualsRecipeSerializers {
                     return EarthAltarRecipe.STREAM_CODEC;
                 }
             });
-
-
 }

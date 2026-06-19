@@ -1,4 +1,4 @@
-package com.ccyscnyz.rituals.registry.blockentity;
+package com.ccyscnyz.rituals.registry;
 
 
 import com.ccyscnyz.rituals.Rituals;

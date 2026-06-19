@@ -1,7 +1,7 @@
 package com.ccyscnyz.rituals.block;
 
 import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
-import com.ccyscnyz.rituals.registry.blockentity.RitualsBlockEntities;
+import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Containers;

@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "I I",
+    "DSD",
+    "GGG"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_block" },
+    "D": { "item": "minecraft:diamond" },
+    "S": {
+      "type": "rituals:damage",
+      "ingredient": { "item": "minecraft:diamond_sword" },
+      "amount": 1
+    },
+    "G": {
+      "type": "rituals:transform",
+      "ingredient": { "item": "minecraft:lava_bucket" },
+      "remnant": { "id": "minecraft:water_bucket" }
+    }
+  },
+  "result": {
+    "id": "minecraft:netherite_block",
+    "count": 1
+  }
+}
