@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -113,11 +112,56 @@ public class ScriptItemUtils {
         return stack.get(componentType);
     }
 
+    public static void removeComponent(ItemStack stack, String componentId) {
+        if (stack.isEmpty()) return;
+        ResourceLocation rl = ResourceLocation.tryParse(componentId.contains(":") ? componentId : "minecraft:" + componentId);
+        if (rl == null) return;
+        DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.get(rl);
+        if (type != null) {
+            stack.remove(type);
+        }
+    }
+
     public static void mergeCustomData(ItemStack stack, net.minecraft.nbt.CompoundTag newTag) {
         if (stack.isEmpty() || newTag == null || newTag.isEmpty()) return;
         stack.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.EMPTY,
                 customData -> customData.update(existingTag -> existingTag.merge(newTag))
         );
+    }
+
+    public static void addCustomData(ItemStack stack, String key, Object value) {
+        if (stack.isEmpty() || key == null || value == null) return;
+        stack.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.EMPTY,
+                customData -> customData.update(existingTag -> {
+                    if (value instanceof String s) {
+                        existingTag.putString(key, s);
+                    } else if (value instanceof Number num) {
+                        if (num instanceof Integer || num instanceof Long || num instanceof Short || num instanceof Byte) {
+                            existingTag.putInt(key, num.intValue());
+                        } else {
+                            existingTag.putDouble(key, num.doubleValue());
+                        }
+                    } else if (value instanceof Boolean b) {
+                        existingTag.putBoolean(key, b);
+                    } else if (value instanceof Character c) {
+                        existingTag.putString(key, c.toString());
+                    }
+                    else if (value instanceof net.minecraft.nbt.Tag tag) {
+                        existingTag.put(key, tag);
+                    }
+                })
+        );
+    }
+
+    public static void removeCustomData(ItemStack stack, String key) {
+        if (stack.isEmpty() || key == null) return;
+        var custom = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (custom == null) return;
+        var tag = custom.copyTag();
+        tag.remove(key);
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag.isEmpty() ? new net.minecraft.nbt.CompoundTag() : tag));
     }
 }

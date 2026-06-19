@@ -55,9 +55,7 @@ public class RitualsScriptEngine {
 
         jsBindings.putMember("ItemStack", net.minecraft.world.item.ItemStack.class);
         jsBindings.putMember("Items", net.minecraft.world.item.Items.class);
-        jsBindings.putMember("ChatFormatting", net.minecraft.ChatFormatting.class);
         jsBindings.putMember("CompoundTag", net.minecraft.nbt.CompoundTag.class);
-        jsBindings.putMember("DataComponents", net.minecraft.core.component.DataComponents.class);
 
         context.eval("js",
                 "globalThis.Item = {" +
@@ -79,8 +77,20 @@ public class RitualsScriptEngine {
                         "    getComponent: function(stack, id) {" +
                         "        return com.ccyscnyz.rituals.script.ScriptItemUtils.getComponent(stack, id);" +
                         "    }," +
+                        "    removeComponent: function(stack, id) {" +
+                        "        com.ccyscnyz.rituals.script.ScriptItemUtils.removeComponent(stack, id);" +
+                        "        return stack;" +
+                        "    }," +
                         "    mergeCustomData: function(stack, tag) {" +
                         "        com.ccyscnyz.rituals.script.ScriptItemUtils.mergeCustomData(stack, tag);" +
+                        "        return stack;" +
+                        "    }," +
+                        "    addCustomData: function(stack, key, value) {" +
+                        "        com.ccyscnyz.rituals.script.ScriptItemUtils.addCustomData(stack, key, value);" +
+                        "        return stack;" +
+                        "    }," +
+                        "    removeCustomData: function(stack, key) {" +
+                        "        com.ccyscnyz.rituals.script.ScriptItemUtils.removeCustomData(stack, key);" +
                         "        return stack;" +
                         "    }" +
                         "};"
