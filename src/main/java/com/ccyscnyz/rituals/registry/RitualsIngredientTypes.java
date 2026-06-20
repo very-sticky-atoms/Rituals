@@ -2,6 +2,7 @@ package com.ccyscnyz.rituals.registry;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.ingredient.DamageIngredient;
+import com.ccyscnyz.rituals.ingredient.OptionalIngredient;
 import com.ccyscnyz.rituals.ingredient.TransformIngredient;
 import net.neoforged.neoforge.common.crafting.IngredientType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -19,6 +20,9 @@ public class RitualsIngredientTypes {
 
     public static final Supplier<IngredientType<TransformIngredient>> TRANSFORM =
             INGREDIENT_TYPES.register("transform", () -> new IngredientType<>(TransformIngredient.CODEC, TransformIngredient.STREAM_CODEC));
+
+    public static final Supplier<IngredientType<OptionalIngredient>> OPTIONAL =
+            INGREDIENT_TYPES.register("optional", () -> new IngredientType<>(OptionalIngredient.CODEC, OptionalIngredient.STREAM_CODEC));
 
     public static void register(net.neoforged.bus.api.IEventBus modEventBus) {
         INGREDIENT_TYPES.register(modEventBus);
