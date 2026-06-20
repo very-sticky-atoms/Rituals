@@ -1,6 +1,6 @@
 package com.ccyscnyz.rituals.block;
 
-import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
+import com.ccyscnyz.rituals.block.entity.EarthRitualPillarBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -86,7 +86,7 @@ public class EarthRitualPillarBlock extends BaseEntityBlock implements SimpleWat
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new RitualPillarBlockEntity(pos, state);
+        return new EarthRitualPillarBlockEntity(pos, state);
     }
 
     @Override
@@ -95,7 +95,7 @@ public class EarthRitualPillarBlock extends BaseEntityBlock implements SimpleWat
         if (level.isClientSide()) return ItemInteractionResult.SUCCESS;
 
         BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof RitualPillarBlockEntity entity)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!(be instanceof EarthRitualPillarBlockEntity entity)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
         ItemStack held = player.getItemInHand(hand);
         if (held.isEmpty()) {
@@ -120,7 +120,7 @@ public class EarthRitualPillarBlock extends BaseEntityBlock implements SimpleWat
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof RitualPillarBlockEntity entity) {
+            if (be instanceof EarthRitualPillarBlockEntity entity) {
                 for (int i = 0; i < entity.inventory.getSlots(); i++) {
                     Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), entity.inventory.getStackInSlot(i));
                 }

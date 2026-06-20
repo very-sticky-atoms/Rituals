@@ -67,15 +67,15 @@ public class EarthAltarBlockEntity extends BlockEntity {
             new Vec3i(-1, 0, -1),  // 西北
     };
 
-    private Map<Integer, List<RitualPillarBlockEntity>> detectPillars() {
-        Map<Integer, List<RitualPillarBlockEntity>> entries = new HashMap<>();
+    private Map<Integer, List<EarthRitualPillarBlockEntity>> detectPillars() {
+        Map<Integer, List<EarthRitualPillarBlockEntity>> entries = new HashMap<>();
         if (level == null) return new HashMap<>();
         int radius = 5;
         for (int dir = 0; dir < 8; dir++) {
-            List<RitualPillarBlockEntity> detectResult = new ArrayList<>();
+            List<EarthRitualPillarBlockEntity> detectResult = new ArrayList<>();
             for (int r = 1; r <= radius; r++) {
                 BlockEntity block = level.getBlockEntity(this.worldPosition.offset(DIRECTION_OFFSETS[dir].multiply(r)));
-                if (block instanceof RitualPillarBlockEntity pillar) {
+                if (block instanceof EarthRitualPillarBlockEntity pillar) {
                     detectResult.add(pillar);
                 }
             }
@@ -102,11 +102,11 @@ public class EarthAltarBlockEntity extends BlockEntity {
             return;
         }
 
-        Map<Integer, List<RitualPillarBlockEntity>> pillars = entity.detectPillars();
+        Map<Integer, List<EarthRitualPillarBlockEntity>> pillars = entity.detectPillars();
         List<List<ItemStack>> directionItems = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             List<ItemStack> items = new ArrayList<>();
-            for (RitualPillarBlockEntity pillar : pillars.get(i)) {
+            for (EarthRitualPillarBlockEntity pillar : pillars.get(i)) {
                 items.add(pillar.inventory.getStackInSlot(0));
             }
             directionItems.add(items);
@@ -161,7 +161,7 @@ public class EarthAltarBlockEntity extends BlockEntity {
             // 在执行任何闭包前，先更新世方块界中的容器物品
             for (int dir = 0; dir < 8; dir++) {
                 int index = 0;
-                for (RitualPillarBlockEntity pillar : pillars.get(dir)) {
+                for (EarthRitualPillarBlockEntity pillar : pillars.get(dir)) {
                     pillar.inventory.extractItem(0, 1, false);
                     pillar.inventory.setStackInSlot(0, contextNew.directionItems().get(dir).get(index).copy());
                     pillar.setChanged();

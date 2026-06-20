@@ -1,6 +1,6 @@
 package com.ccyscnyz.rituals.client.renderer;
 
-import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
+import com.ccyscnyz.rituals.block.entity.EarthRitualPillarBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -13,12 +13,12 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class RitualPillarRenderer implements BlockEntityRenderer<RitualPillarBlockEntity> {
+public class EarthRitualPillarRenderer implements BlockEntityRenderer<EarthRitualPillarBlockEntity> {
 
-    public RitualPillarRenderer(BlockEntityRendererProvider.Context context) {}
+    public EarthRitualPillarRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(RitualPillarBlockEntity be, float partialTick, PoseStack poseStack,
+    public void render(EarthRitualPillarBlockEntity be, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         ItemStack stack = be.inventory.getStackInSlot(0);
         if (stack.isEmpty()) return;

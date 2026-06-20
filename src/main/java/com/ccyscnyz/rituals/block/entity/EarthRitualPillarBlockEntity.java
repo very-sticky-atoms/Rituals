@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import javax.annotation.Nullable;
 
-public class RitualPillarBlockEntity extends BlockEntity {
+public class EarthRitualPillarBlockEntity extends BlockEntity {
 
     public final ItemStackHandler inventory = new ItemStackHandler(1) {
         @Override
@@ -30,7 +30,7 @@ public class RitualPillarBlockEntity extends BlockEntity {
     };
 
     // 构造函数（使用 RitualsBlockEntities.RITUAL_PILLAR）
-    public RitualPillarBlockEntity(BlockPos pos, BlockState state) {
+    public EarthRitualPillarBlockEntity(BlockPos pos, BlockState state) {
         super(RitualsBlockEntities.RITUAL_PILLAR.get(), pos, state);
     }
 

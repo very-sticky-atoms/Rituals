@@ -4,7 +4,7 @@ import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
 import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
-import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
+import com.ccyscnyz.rituals.block.entity.EarthRitualPillarBlockEntity;
 import com.ccyscnyz.rituals.util.SidedItemHandler;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
@@ -61,7 +61,7 @@ public class RitualsCapabilities {
                 Capabilities.ItemHandler.BLOCK,
                 RitualsBlockEntities.RITUAL_PILLAR.get(),
                 (blockEntity, side) -> {
-                    if (blockEntity instanceof RitualPillarBlockEntity entity) {
+                    if (blockEntity instanceof EarthRitualPillarBlockEntity entity) {
                         return entity.inventory;
                     }
                     return null;

@@ -4,7 +4,7 @@ package com.ccyscnyz.rituals.registry;
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.block.entity.EarthAltarBlockEntity;
 import com.ccyscnyz.rituals.block.entity.HighOvenBlockEntity;
-import com.ccyscnyz.rituals.block.entity.RitualPillarBlockEntity;
+import com.ccyscnyz.rituals.block.entity.EarthRitualPillarBlockEntity;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -27,10 +27,10 @@ public class RitualsBlockEntities {
                     // build(null) 中的 null 是给数据修复系统用的，通常传 null 即可。(AI说的)
             );
 
-    public static final Supplier<BlockEntityType<RitualPillarBlockEntity>> RITUAL_PILLAR =
+    public static final Supplier<BlockEntityType<EarthRitualPillarBlockEntity>> RITUAL_PILLAR =
             BLOCK_ENTITIES.register("ritual_pillar",
                     () -> BlockEntityType.Builder.of(
-                            RitualPillarBlockEntity::new,
+                            EarthRitualPillarBlockEntity::new,
                             RitualsBlocks.EARTH_RITUAL_PILLAR.get()
                     ).build(null)
             );
