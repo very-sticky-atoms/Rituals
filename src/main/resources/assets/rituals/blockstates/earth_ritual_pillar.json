@@ -1,7 +1,7 @@
 {
   "variants": {
     "": {
-      "model": "rituals:block/ritual_pillar"
+      "model": "rituals:block/earth_ritual_pillar"
     }
   }
 }
