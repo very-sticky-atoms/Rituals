@@ -3,7 +3,7 @@
 	"credit": "Made with Blockbench",
 	"texture_size": [32, 32],
 	"textures": {
-		"1": "rituals:block/ritual_pillar",
+		"1": "rituals:block/earth_ritual_pillar",
 		"particle": "minecraft:block/polished_andesite"
 	},
 	"elements": [
