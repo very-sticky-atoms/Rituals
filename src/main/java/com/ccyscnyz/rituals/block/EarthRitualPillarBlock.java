@@ -28,17 +28,17 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
 
-public class RitualPillarBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
+public class EarthRitualPillarBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
 
     protected static final VoxelShape SHAPE = Block.box(6, 0, 6, 10, 12, 10);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
-        return simpleCodec(RitualPillarBlock::new);
+        return simpleCodec(EarthRitualPillarBlock::new);
     }
 
-    public RitualPillarBlock(Properties properties) {
+    public EarthRitualPillarBlock(Properties properties) {
         super(properties.noOcclusion());
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }

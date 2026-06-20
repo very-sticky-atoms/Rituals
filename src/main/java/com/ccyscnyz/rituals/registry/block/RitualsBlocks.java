@@ -4,9 +4,8 @@ import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.annotation.AutoBlockItem;
 import com.ccyscnyz.rituals.block.EarthAltarBlock;
 import com.ccyscnyz.rituals.block.HighOvenBlock;
-import com.ccyscnyz.rituals.block.RitualPillarBlock;
+import com.ccyscnyz.rituals.block.EarthRitualPillarBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -27,7 +26,7 @@ public class RitualsBlocks {
 
     @AutoBlockItem(tab = "rituals_tab")
     public static final DeferredBlock<Block> EARTH_RITUAL_PILLAR = BLOCKS.register("earth_ritual_pillar",
-            () -> new RitualPillarBlock(BlockBehaviour.Properties.of()
+            () -> new EarthRitualPillarBlock(BlockBehaviour.Properties.of()
                     .strength(3.5F)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.STONE)
