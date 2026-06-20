@@ -8,6 +8,7 @@
   "item.rituals.copper_pickaxe": "Copper Pickaxe",
   "item.rituals.copper_shovel": "Copper Shovel",
   "item.rituals.copper_sword": "Copper Sword",
+  "item.rituals.exquisite_diamond": "Exquisite Diamond",
   "item.rituals.obsidian_axe": "Obsidian Axe",
   "item.rituals.obsidian_hoe": "Obsidian Hoe",
   "item.rituals.obsidian_pickaxe": "Obsidian Pickaxe",
@@ -21,5 +22,6 @@
   "item.rituals.steel_sword": "Steel Sword",
   "itemGroup.rituals.rituals_tab": "Rituals",
   "jei.rituals.earth_altar": "Earth Altar",
-  "jei.rituals.high_oven": "High Oven"
+  "jei.rituals.high_oven": "High Oven",
+  "tooltip.rituals.flawlessness": "Flawlessness: %s%%"
 }

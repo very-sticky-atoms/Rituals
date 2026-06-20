@@ -8,6 +8,7 @@
   "item.rituals.copper_pickaxe": "铜镐",
   "item.rituals.copper_shovel": "铜锹",
   "item.rituals.copper_sword": "铜剑",
+  "item.rituals.exquisite_diamond": "精致的钻石",
   "item.rituals.obsidian_axe": "黑曜石斧",
   "item.rituals.obsidian_hoe": "黑曜石锄",
   "item.rituals.obsidian_pickaxe": "黑曜石镐",
@@ -21,5 +22,6 @@
   "item.rituals.steel_sword": "钢剑",
   "itemGroup.rituals.rituals_tab": "仪式",
   "jei.rituals.earth_altar": "大地祭坛",
-  "jei.rituals.high_oven": "高炉"
+  "jei.rituals.high_oven": "高炉",
+  "tooltip.rituals.flawlessness": "无瑕度: %s%%"
 }

@@ -1,5 +1,6 @@
 package com.ccyscnyz.rituals;
 
+import com.ccyscnyz.rituals.registry.RitualsDataComponents;
 import com.ccyscnyz.rituals.registry.block.BlockItemRegistrar;
 import com.ccyscnyz.rituals.registry.block.RitualsBlocks;
 import com.ccyscnyz.rituals.registry.RitualsBlockEntities;
@@ -38,6 +39,8 @@ public class Rituals {
         modEventBus.addListener(this::commonSetup);
 
         TabItemCollector.collect(MODID);
+
+        RitualsDataComponents.COMPONENTS.register(modEventBus);
 
         RitualsCreativeTabs.CREATIVE_TABS.register(modEventBus);
         RitualsItems.ITEMS.register(modEventBus);

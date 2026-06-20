@@ -2,6 +2,8 @@ package com.ccyscnyz.rituals.registry.item;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.annotation.TabItem;
+import com.ccyscnyz.rituals.item.FlawlessItem;
+import com.ccyscnyz.rituals.registry.RitualsDataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -132,6 +134,15 @@ public class RitualsItems {
             () -> new HoeItem(RitualsTiers.OBSIDIAN, new Item.Properties()
                     .attributes(HoeItem.createAttributes(RitualsTiers.OBSIDIAN, -4.0F, 0.0F))
             ));
+
+    @TabItem("rituals_tab")
+    public static final DeferredItem<FlawlessItem> EXQUISITE_DIAMOND = ITEMS.register("exquisite_diamond",
+            () -> new FlawlessItem(
+                    new Item.Properties()
+                            .component(RitualsDataComponents.FLAWLESSNESS.get(),
+                                    new RitualsDataComponents.FlawlessnessInfo(100, 100))
+            )
+    );
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

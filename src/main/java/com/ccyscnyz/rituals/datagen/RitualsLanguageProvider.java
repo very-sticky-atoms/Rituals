@@ -113,5 +113,6 @@ public class RitualsLanguageProvider extends LanguageProvider {
         add("itemGroup.rituals.rituals_tab", "");
         add("jei.rituals.high_oven", "");
         add("jei.rituals.earth_altar", "");
+        add("tooltip.rituals.flawlessness", "");
     }
 }
