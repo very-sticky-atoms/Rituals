@@ -1,3 +1,4 @@
+
 let output = Item.of('minecraft:iron_ingot');
 
 Utils.setComponent(output, 'minecraft:custom_name', {

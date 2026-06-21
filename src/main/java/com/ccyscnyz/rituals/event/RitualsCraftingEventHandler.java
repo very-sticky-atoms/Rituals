@@ -2,6 +2,7 @@ package com.ccyscnyz.rituals.event;
 
 import com.ccyscnyz.rituals.Rituals;
 import com.ccyscnyz.rituals.ingredient.DamageIngredient;
+import com.ccyscnyz.rituals.ingredient.RitualsIngredient;
 import com.ccyscnyz.rituals.ingredient.TransformIngredient;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
@@ -31,10 +32,7 @@ public class RitualsCraftingEventHandler {
 
         int width = craftingContainer.getWidth();
         int height = craftingContainer.getHeight();
-        List<ItemStack> items = new ArrayList<>();
-        for (int i = 0; i < craftingContainer.getContainerSize(); i++) {
-            items.add(craftingContainer.getItem(i));
-        }
+        List<ItemStack> items = new ArrayList<>(craftingContainer.getItems());
         CraftingInput input = CraftingInput.of(width, height, items);
 
         // 寻找当前匹配的配方
@@ -43,33 +41,14 @@ public class RitualsCraftingEventHandler {
                 .ifPresent(recipeHolder -> {
 
                     // 遍历合成网格
-                    for (int i = 0; i < craftingContainer.getContainerSize(); i++) {
-                        final int slotIndex = i;
-                        ItemStack stackInSlot = craftingContainer.getItem(i);
-                        if (stackInSlot.isEmpty()) continue;
+                    for (int slotIndex = 0; slotIndex < craftingContainer.getContainerSize(); slotIndex++) {
+                        ItemStack stackInSlot = craftingContainer.getItem(slotIndex);
 
                         for (Ingredient ingredient : recipeHolder.value().getIngredients()) {
                             if (ingredient.test(stackInSlot)) {
                                 ICustomIngredient custom = ingredient.getCustomIngredient();
-
-                                // 扣耐久逻辑
-                                if (custom instanceof DamageIngredient dmg) {
-                                    // 预扣除：算出扣完耐久后的新物品
-                                    ItemStack ruined = dmg.consume(stackInSlot);
-
-                                    if (!ruined.isEmpty()) {
-                                        net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().execute(() -> {
-                                            craftingContainer.setItem(slotIndex, ruined);
-                                        });
-                                    }
-                                }
-
-                                // 物品转换逻辑
-                                else if (custom instanceof TransformIngredient trans) {
-                                    ItemStack remnant = trans.consume();
-                                    net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer().execute(() -> {
-                                        craftingContainer.setItem(slotIndex, remnant);
-                                    });
+                                if(custom instanceof RitualsIngredient ritualsIngredient && ritualsIngredient.customConsumption()) {
+                                    craftingContainer.setItem(slotIndex, ritualsIngredient.consume(stackInSlot));
                                 }
                                 break;
                             }

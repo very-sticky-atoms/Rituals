@@ -13,33 +13,22 @@ import net.neoforged.neoforge.common.crafting.IngredientType;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-public class DamageIngredient implements ICustomIngredient {
-    private final Ingredient base;
+public class DamageIngredient extends RitualsIngredient {
     private final int damage;
 
     public DamageIngredient(Ingredient base, int damage) {
-        this.base = base;
+        super(base);
         this.damage = damage;
-    }
-
-    @Override
-    public boolean test(ItemStack stack) {
-        return base.test(stack) && stack.isDamageableItem();
-    }
-
-    @Override
-    public Stream<ItemStack> getItems() {
-        return Arrays.stream(base.getItems());
-    }
-
-    @Override
-    public boolean isSimple() {
-        return false;
     }
 
     @Override
     public IngredientType<?> getType() {
         return RitualsIngredientTypes.DAMAGE.get();
+    }
+
+    @Override
+    public boolean customConsumption() {
+        return true;
     }
 
     public ItemStack consume(ItemStack stack) {
@@ -57,7 +46,7 @@ public class DamageIngredient implements ICustomIngredient {
 
     public static final MapCodec<DamageIngredient> CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    Ingredient.CODEC.fieldOf("ingredient").forGetter(i -> i.base),
+                    Ingredient.CODEC.fieldOf("ingredient").forGetter(DamageIngredient::getBase),
                     net.minecraft.util.ExtraCodecs.POSITIVE_INT.fieldOf("amount").forGetter(i -> i.damage)
             ).apply(instance, DamageIngredient::new)
     );

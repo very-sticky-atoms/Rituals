@@ -90,3 +90,4 @@ interface ContextContainer {
 declare var context: ContextContainer;
 declare var callback: { value: (ctx: EarthAltarRecipeContext) => void };
 declare var processingTime: number[];
+declare var doOverwrite: boolean[];
