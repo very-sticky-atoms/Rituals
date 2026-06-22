@@ -11,10 +11,39 @@ declare class ItemStack {
     isEmpty(): boolean;
     setCount(count: number): void;
     isDamageableItem(): boolean;
+    is(item: Item): boolean;
+    is(item: Holder<Item>): boolean;
+    is(item: HolderSet<Item>): boolean;
+    is(item: Predicate<Holder<Item>>): boolean;
+    is(tag: TagKey<Item>):boolean;
 }
 
 // Items.class（静态字段）
 declare namespace Items {
+}
+
+declare namespace ITags {
+}
+
+declare namespace ItemTags {
+}
+
+declare namespace BlockTags {
+}
+
+declare namespace FluidTags {
+}
+
+declare namespace BiomeTags {
+}
+
+declare namespace EnchantmentTags {
+}
+
+declare namespace DamageTypeTags {
+}
+
+declare namespace EntityTypeTags {
 }
 
 // CompoundTag.class
@@ -91,3 +120,4 @@ declare var context: ContextContainer;
 declare var callback: { value: (ctx: EarthAltarRecipeContext) => void };
 declare var processingTime: number[];
 declare var doOverwrite: boolean[];
+declare var cancelRecipe: boolean[];

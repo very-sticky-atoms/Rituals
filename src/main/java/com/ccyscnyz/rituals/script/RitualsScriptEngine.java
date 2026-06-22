@@ -55,6 +55,14 @@ public class RitualsScriptEngine {
 
         jsBindings.putMember("ItemStack", net.minecraft.world.item.ItemStack.class);
         jsBindings.putMember("Items", net.minecraft.world.item.Items.class);
+        jsBindings.putMember("ITags", net.neoforged.neoforge.common.Tags.class);
+        jsBindings.putMember("BlockTags",net.minecraft.tags.BlockTags.class);
+        jsBindings.putMember("ItemTags",net.minecraft.tags.ItemTags.class);
+        jsBindings.putMember("BiomeTags",net.minecraft.tags.BiomeTags.class);
+        jsBindings.putMember("FluidTags",net.minecraft.tags.FluidTags.class);
+        jsBindings.putMember("EnchantmentTags",net.minecraft.tags.EnchantmentTags.class);
+        jsBindings.putMember("DamageTypeTags",net.minecraft.tags.DamageTypeTags.class);
+        jsBindings.putMember("EntityTypeTags",net.minecraft.tags.EntityTypeTags.class);
         jsBindings.putMember("CompoundTag", net.minecraft.nbt.CompoundTag.class);
 
         context.eval("js",
