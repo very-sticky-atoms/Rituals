@@ -72,6 +72,6 @@ public record EarthAltarRecipeContext(ItemStack center, List<List<ItemStack>> di
         }
     }
 
-    public record StartScriptResult(int processingTime, Callback callback){}
+    public record StartScriptResult(boolean cancelRecipe,int processingTime, Callback callback){}
     public record FinishScriptResult(EarthAltarRecipeContext context, Callback callback){}
 }

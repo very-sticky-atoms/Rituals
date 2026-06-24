@@ -68,7 +68,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
     public EarthAltarRecipeContext.StartScriptResult runStartScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, int processingTime, EarthAltarRecipeContext.Callback callback) {
         if (craftStartScriptUri.isEmpty()) {
-            return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
+            return new EarthAltarRecipeContext.StartScriptResult(false, processingTime, callback);
         }
 
         ResourceLocation finalScriptTarget = craftStartScriptUri.get();
@@ -76,12 +76,14 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
 
         try {
             int[] ptContainer = {processingTime};
+            boolean[] crContainer = {false};
             EarthAltarRecipeContext.CallbackContainer cbkContainer = new EarthAltarRecipeContext.CallbackContainer(callback);
             EarthAltarRecipeContext.Container ctxContainer = context.copy().wrap();
 
             if (persistentContext != null) {
                 Value jsBindings = persistentContext.getBindings("js");
                 jsBindings.putMember("context", ctxContainer);
+                jsBindings.putMember("cancelRecipe",crContainer);
                 jsBindings.putMember("processingTime", ptContainer);
                 jsBindings.putMember("callback", cbkContainer);
 
@@ -89,20 +91,21 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             } else {
                 Map<String, Object> bindings = new java.util.HashMap<>();
                 bindings.put("context", ctxContainer);
+                bindings.put("cancelRecipe",crContainer);
                 bindings.put("processingTime", ptContainer);
                 bindings.put("callback", cbkContainer);
 
                 RitualsScriptEngine.executeUriCached(finalScriptTarget, bindings);
             }
 
-            return new EarthAltarRecipeContext.StartScriptResult(ptContainer[0], cbkContainer.value);
+            return new EarthAltarRecipeContext.StartScriptResult(crContainer[0],ptContainer[0], cbkContainer.value);
         } catch (Exception e) {
             Rituals.LOGGER.error("==== RITUALS SCRIPT CRASH REPORT ====");
             Rituals.LOGGER.error("Script URI Pointer: {}", finalScriptTarget);
             Rituals.LOGGER.error("=====================================");
             Rituals.LOGGER.error("Failed to execute start script from resource", e);
         }
-        return new EarthAltarRecipeContext.StartScriptResult(processingTime, callback);
+        return new EarthAltarRecipeContext.StartScriptResult(false,processingTime, callback);
     }
 
     public EarthAltarRecipeContext.FinishScriptResult runFinishScript(Context persistentContext, ResourceLocation scriptSource, EarthAltarRecipeContext context, EarthAltarRecipeContext.Callback callback) {

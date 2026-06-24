@@ -97,10 +97,6 @@ public class EarthAltarBlockEntity extends BlockEntity {
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, EarthAltarBlockEntity entity) {
         ItemStack centerStack = entity.inventory.getStackInSlot(0);
-        if (centerStack.isEmpty()) {
-            entity.resetCraft();
-            return;
-        }
 
         Map<Integer, List<EarthRitualPillarBlockEntity>> pillars = entity.detectPillars();
         List<List<ItemStack>> directionItems = new ArrayList<>();
@@ -136,6 +132,10 @@ public class EarthAltarBlockEntity extends BlockEntity {
             EarthAltarRecipeContext.StartScriptResult startScriptResult = recipe.runStartScript(
                     entity.ritualContext.get(), recipeId.withSuffix("/start"), context, entity.maxCraftTime, entity.callback);
 
+            if(startScriptResult.cancelRecipe()){
+                entity.resetCraft();
+                return;
+            }
             entity.maxCraftTime = startScriptResult.processingTime();
             entity.callback = startScriptResult.callback();
         }
