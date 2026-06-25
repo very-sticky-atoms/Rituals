@@ -2,9 +2,11 @@ package com.ccyscnyz.rituals.ingredient;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.neoforged.neoforge.common.crafting.CompoundIngredient;
 import net.neoforged.neoforge.common.crafting.ICustomIngredient;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -39,6 +41,21 @@ public abstract class RitualsIngredient implements ICustomIngredient {
     }
 
     public ItemStack consume(ItemStack stack) {
+        return ItemStack.EMPTY;
+    }
+
+    public static ItemStack handleConsumption(Ingredient ingredient,ItemStack stack) {
+        if(ingredient.isCustom()){
+            if(ingredient.getCustomIngredient() instanceof CompoundIngredient(List<Ingredient> children)) {
+                for (Ingredient child : children) {
+                    if(child.test(stack)) {
+                        return handleConsumption(child, stack);
+                    }
+                }
+            } else if (ingredient.getCustomIngredient() instanceof RitualsIngredient ritualsIng) {
+                return ritualsIng.consume(stack);
+            }
+        }
         return ItemStack.EMPTY;
     }
 }

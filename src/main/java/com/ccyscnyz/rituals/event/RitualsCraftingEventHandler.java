@@ -46,11 +46,7 @@ public class RitualsCraftingEventHandler {
 
                         for (Ingredient ingredient : recipeHolder.value().getIngredients()) {
                             if (ingredient.test(stackInSlot)) {
-                                ICustomIngredient custom = ingredient.getCustomIngredient();
-                                if(custom instanceof RitualsIngredient ritualsIngredient && ritualsIngredient.customConsumption()) {
-                                    craftingContainer.setItem(slotIndex, ritualsIngredient.consume(stackInSlot));
-                                }
-                                break;
+                                craftingContainer.setItem(slotIndex, RitualsIngredient.handleConsumption(ingredient, stackInSlot));
                             }
                         }
                     }

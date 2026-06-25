@@ -17,6 +17,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.crafting.CompoundIngredient;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
@@ -114,11 +115,7 @@ public class EarthAltarRecipe implements Recipe<EarthAltarRecipeContext> {
             List<ItemStack> consumedDirection = new ArrayList<>();
             int i = 0;
             for (Ingredient ingredient : inputs.get(dir)) {
-                if(ingredient.isCustom() && ingredient.getCustomIngredient() instanceof RitualsIngredient custom && custom.customConsumption()) {
-                    consumedDirection.add(custom.consume(context.directionItems().get(dir).get(i)));
-                } else {
-                    consumedDirection.add(ItemStack.EMPTY);
-                }
+                consumedDirection.add(RitualsIngredient.handleConsumption(ingredient,context.directionItems().get(dir).get(i)));
                 i++;
             }
             consumed.add(consumedDirection);
